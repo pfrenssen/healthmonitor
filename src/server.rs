@@ -2,10 +2,10 @@ use axum::{
     routing::get,
     Router,
 };
-use std::sync::Arc;
+use log::info;
 use tokio::net::TcpListener;
-use tokio::sync::Notify;
 use tokio::task::JoinHandle;
+use tower_http::trace::TraceLayer;
 
 pub struct Server {
     is_running: bool,
@@ -24,22 +24,25 @@ impl Server {
         self.is_running
     }
 
-    pub async fn start(&mut self, notify: Arc<Notify>) {
+    pub async fn start(&mut self) -> bool {
         if self.is_running {
-            return;
+            info!("Server is already running");
+            return false;
         }
 
-        let app = Router::new().route("/status", get(status_handler));
+        let app = Router::new()
+            .route("/status", get(status_handler))
+            .layer(TraceLayer::new_for_http());
 
         let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-        println!("Listening on {}", listener.local_addr().unwrap());
+        info!("Listening on {}", listener.local_addr().unwrap());
         self.is_running = true;
         self.handle = Some(tokio::spawn(async move {
             axum::serve(listener, app)
                 .await
                 .unwrap();
         }));
-        println!("Server started");
+        true
     }
 
     pub async fn stop(&mut self) {
