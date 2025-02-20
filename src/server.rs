@@ -3,7 +3,7 @@ use axum::{
     Router,
 };
 use crate::config::CONFIG;
-use log::{debug, info};
+use log::{debug, error, info, warn};
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
@@ -25,10 +25,10 @@ impl Server {
         self.is_running
     }
 
-    pub async fn start(&mut self) -> bool {
+    pub async fn start(&mut self) -> Result<(), ()> {
         if self.is_running {
-            info!("Server is already running");
-            return false;
+            warn!("Server is already running.");
+            return Err(());
         }
 
         let app = Router::new()
@@ -37,15 +37,21 @@ impl Server {
 
         let addr = format!("{}:{}", CONFIG.server.address, CONFIG.server.port);
         debug!("Connecting to {}", addr);
-        let listener = TcpListener::bind(addr).await.unwrap();
-        info!("Listening on {}", listener.local_addr().unwrap());
+        let listener = match TcpListener::bind(&addr).await {
+            Ok(listener) => listener,
+            Err(e) => {
+                error!("Failed to bind to {}: {}", addr, e);
+                return Err(());
+            }
+        };
         self.is_running = true;
         self.handle = Some(tokio::spawn(async move {
             axum::serve(listener, app)
                 .await
                 .unwrap();
         }));
-        true
+        info!("Server started.");
+        Ok(())
     }
 
     pub async fn stop(&mut self) {

@@ -2,6 +2,7 @@ mod cli;
 mod server;
 mod config;
 
+use std::process::exit;
 use clap::Parser;
 use config::CONFIG;
 use dotenv::dotenv;
@@ -30,7 +31,10 @@ async fn main() {
             match command {
                 Some(cli::ServerCommands::Start) => {
                     let mut srv = server.lock().unwrap();
-                    server_started = srv.start().await;
+                    match srv.start().await {
+                        Ok(_) => server_started = true,
+                        Err(_) => exit(1),
+                    }
                 }
                 Some(cli::ServerCommands::Stop) => {
                     let mut srv = server.lock().unwrap();
