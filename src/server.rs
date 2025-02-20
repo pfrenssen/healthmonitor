@@ -2,7 +2,8 @@ use axum::{
     routing::get,
     Router,
 };
-use log::info;
+use crate::config::CONFIG;
+use log::{debug, info};
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
@@ -34,7 +35,9 @@ impl Server {
             .route("/status", get(status_handler))
             .layer(TraceLayer::new_for_http());
 
-        let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+        let addr = format!("{}:{}", CONFIG.server.address, CONFIG.server.port);
+        debug!("Connecting to {}", addr);
+        let listener = TcpListener::bind(addr).await.unwrap();
         info!("Listening on {}", listener.local_addr().unwrap());
         self.is_running = true;
         self.handle = Some(tokio::spawn(async move {

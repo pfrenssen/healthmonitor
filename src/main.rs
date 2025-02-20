@@ -1,25 +1,21 @@
 mod cli;
 mod server;
+mod config;
 
 use clap::Parser;
+use config::CONFIG;
 use dotenv::dotenv;
+use log::{debug, info};
 use server::Server;
 use std::sync::{Arc, Mutex};
 use tokio::signal;
-use log::{debug, info};
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
     env_logger::init();
 
-    // Print the environment variables
-    for (key, value) in std::env::vars() {
-        // Check if the key starts with "HEALTHMONITOR"
-        if key.starts_with("HEALTHMONITOR") {
-            println!("{}: {}", key, value);
-        }
-    }
+    debug!("Config: {:?}", *CONFIG);
 
     // Parse the CLI arguments.
     let args = cli::Cli::parse();
