@@ -46,6 +46,7 @@ async fn main() {
                         println!("running");
                     } else {
                         println!("not running");
+                        exit(1);
                     }
                 }
                 None => {}
