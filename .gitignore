@@ -1,0 +1,9 @@
+# Ignore paths used by the Rust compiler.
+/target
+
+# Ignore environment specific configuration.
+.env
+
+# Ignore files related to development tools.
+/.aider*
+/.idea/
