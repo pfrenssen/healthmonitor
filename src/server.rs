@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use axum::{
     routing::get,
     Router,
@@ -11,13 +12,15 @@ use tower_http::trace::TraceLayer;
 pub struct Server {
     is_running: bool,
     handle: Option<JoinHandle<()>>,
+    status: Arc<Mutex<bool>>,
 }
 
 impl Server {
-    pub fn new() -> Self {
+    pub fn new(status: Arc<Mutex<bool>>) -> Self {
         Server {
             is_running: false,
             handle: None,
+            status,
         }
     }
 
@@ -31,8 +34,11 @@ impl Server {
             return Err(());
         }
 
+        let status_clone = self.status.clone();
+
         let app = Router::new()
-            .route("/status", get(status_handler))
+            .route("/status", get(move || status(status_clone.clone())))
+            .route("/info", get(info))
             .layer(TraceLayer::new_for_http());
 
         let addr = format!("{}:{}", CONFIG.server.address, CONFIG.server.port);
@@ -70,6 +76,19 @@ impl Server {
     }
 }
 
-async fn status_handler() -> &'static str {
-    "200 OK"
+/// Returns the current health status of the monitored application.
+async fn status(status: Arc<Mutex<bool>>) -> String {
+    let status = status.lock().unwrap();
+    if *status {
+        "Healthy".to_string()
+    } else {
+        "Unhealthy".to_string()
+    }
+}
+
+/// Returns the application name and version.
+async fn info() -> String {
+    let name = env!("CARGO_PKG_NAME");
+    let version = env!("CARGO_PKG_VERSION");
+    format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version)
 }

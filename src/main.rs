@@ -22,8 +22,8 @@ async fn main() {
     let args = cli::Cli::parse();
     debug!("Parsed args: {:?}", args);
 
-    // Shared state to manage server status
-    let server = Arc::new(Mutex::new(Server::new()));
+    let status = Arc::new(Mutex::new(true));
+    let server = Arc::new(Mutex::new(Server::new(status.clone())));
 
     let mut server_started = false;
     match args.command {
@@ -70,6 +70,18 @@ async fn main() {
                 }
                 break;
             }
+            _ = toggle_status_periodically(status.clone()) => {}
         }
+    }
+}
+
+async fn toggle_status_periodically(status: Arc<Mutex<bool>>) {
+    loop {
+        {
+            let mut status = status.lock().unwrap();
+            *status = !*status;
+            info!("Toggled status to {}", *status);
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
     }
 }
