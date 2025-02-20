@@ -1,6 +1,7 @@
 mod cli;
-mod server;
 mod config;
+mod server;
+mod status;
 
 use std::process::exit;
 use clap::Parser;
@@ -10,6 +11,7 @@ use log::{debug, info};
 use server::Server;
 use std::sync::{Arc, Mutex};
 use tokio::signal;
+use crate::status::HealthStatus;
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +24,7 @@ async fn main() {
     let args = cli::Cli::parse();
     debug!("Parsed args: {:?}", args);
 
-    let status = Arc::new(Mutex::new(true));
+    let status = Arc::new(Mutex::new(HealthStatus::new()));
     let server = Arc::new(Mutex::new(Server::new(status.clone())));
 
     let mut server_started = false;
@@ -74,12 +76,12 @@ async fn main() {
     }
 }
 
-async fn toggle_status_periodically(status: Arc<Mutex<bool>>) {
+async fn toggle_status_periodically(status: Arc<Mutex<HealthStatus>>) {
     loop {
         {
             let mut status = status.lock().unwrap();
-            *status = !*status;
-            info!("Toggled status to {}", *status);
+            status.healthy = !status.healthy;
+            info!("Toggled status to {}", status.to_string());
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
     }

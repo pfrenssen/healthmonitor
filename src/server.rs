@@ -9,14 +9,15 @@ use reqwest::Client;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
+use crate::status::HealthStatus;
 
 pub struct Server {
     handle: Option<JoinHandle<()>>,
-    status: Arc<Mutex<bool>>,
+    status: Arc<Mutex<HealthStatus>>,
 }
 
 impl Server {
-    pub fn new(status: Arc<Mutex<bool>>) -> Self {
+    pub fn new(status: Arc<Mutex<HealthStatus>>) -> Self {
         Server {
             handle: None,
             status,
@@ -94,13 +95,11 @@ impl Server {
 }
 
 /// Returns the current health status of the monitored application.
-async fn status(status: Arc<Mutex<bool>>) -> String {
+async fn status(status: Arc<Mutex<HealthStatus>>) -> String {
+    use serde_json::to_string;
+
     let status = status.lock().unwrap();
-    if *status {
-        "Healthy".to_string()
-    } else {
-        "Unhealthy".to_string()
-    }
+    to_string(&*status).unwrap()
 }
 
 /// Returns the application name and version.
