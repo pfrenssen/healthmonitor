@@ -5,12 +5,12 @@ use axum::{
 };
 use crate::config::CONFIG;
 use log::{debug, error, info, warn};
+use reqwest::Client;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
 
 pub struct Server {
-    is_running: bool,
     handle: Option<JoinHandle<()>>,
     status: Arc<Mutex<bool>>,
 }
@@ -18,18 +18,13 @@ pub struct Server {
 impl Server {
     pub fn new(status: Arc<Mutex<bool>>) -> Self {
         Server {
-            is_running: false,
             handle: None,
             status,
         }
     }
 
-    pub fn is_running(&self) -> bool {
-        self.is_running
-    }
-
     pub async fn start(&mut self) -> Result<(), ()> {
-        if self.is_running {
+        if self.is_running().await {
             warn!("Server is already running.");
             return Err(());
         }
@@ -50,7 +45,6 @@ impl Server {
                 return Err(());
             }
         };
-        self.is_running = true;
         self.handle = Some(tokio::spawn(async move {
             axum::serve(listener, app)
                 .await
@@ -61,18 +55,41 @@ impl Server {
     }
 
     pub async fn stop(&mut self) {
-        if !self.is_running {
+        // Todo: If the handle exists, abort it. Otherwise, check if the server is running in
+        //   another process, and send a POST request to /shutdown to stop the server.
+        if !self.is_running().await {
             return;
         }
-
-        // Implement graceful shutdown logic here
-        // For simplicity, we're not implementing it fully
-        self.is_running = false;
 
         if let Some(handle) = self.handle.take() {
             handle.abort();
         }
         println!("Server stopped.");
+    }
+
+    pub async fn is_running(&self) -> bool {
+        if self.handle.is_some() {
+            return true;
+        }
+
+        let addr = format!("http://{}:{}/info", CONFIG.server.address, CONFIG.server.port);
+        let client = Client::new();
+
+        match client.get(&addr).send().await {
+            Ok(response) => {
+                if response.status().is_success() {
+                    if let Ok(body) = response.text().await {
+                        let name = env!("CARGO_PKG_NAME");
+                        let version = env!("CARGO_PKG_VERSION");
+                        let expected_body = format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version);
+                        return body == expected_body;
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+
+        false
     }
 }
 

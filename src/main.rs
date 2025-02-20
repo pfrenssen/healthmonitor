@@ -42,7 +42,7 @@ async fn main() {
                 }
                 Some(cli::ServerCommands::Status) => {
                     let srv = server.lock().unwrap();
-                    if srv.is_running() {
+                    if srv.is_running().await {
                         println!("running");
                     } else {
                         println!("not running");
@@ -65,9 +65,7 @@ async fn main() {
             _ = signal::ctrl_c() => {
                 info!("Received Ctrl+C, shutting down.");
                 let mut srv = server.lock().unwrap();
-                if srv.is_running() {
-                    srv.stop().await;
-                }
+                srv.stop().await;
                 break;
             }
             _ = toggle_status_periodically(status.clone()) => {}
