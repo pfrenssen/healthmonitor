@@ -2,8 +2,9 @@ use axum::{
     routing::get,
     Router,
 };
-use std::{net::SocketAddr, sync::Arc};
-use tokio::sync::Mutex;
+use std::sync::Arc;
+use tokio::net::TcpListener;
+use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 
 pub struct Server {
@@ -30,18 +31,15 @@ impl Server {
 
         let app = Router::new().route("/status", get(status_handler));
 
-        let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+        let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+        println!("Listening on {}", listener.local_addr().unwrap());
         self.is_running = true;
-
-        let handle = tokio::spawn(async move {
-            axum::Server::bind(&addr)
-                .serve(app.into_make_service())
-                .with_graceful_shutdown(shutdown_signal(notify))
+        self.handle = Some(tokio::spawn(async move {
+            axum::serve(listener, app)
                 .await
                 .unwrap();
-        });
-
-        self.handle = Some(handle);
+        }));
+        println!("Server started");
     }
 
     pub async fn stop(&mut self) {
@@ -56,13 +54,10 @@ impl Server {
         if let Some(handle) = self.handle.take() {
             handle.abort();
         }
+        println!("Server stopped.");
     }
 }
 
 async fn status_handler() -> &'static str {
     "200 OK"
-}
-
-async fn shutdown_signal(notify: Arc<Notify>) {
-    notify.notified().await;
 }

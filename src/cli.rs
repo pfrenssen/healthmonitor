@@ -5,11 +5,11 @@ use clap::{Parser, Subcommand};
 #[command(author, version, about, long_about = None, arg_required_else_help = true)]
 pub struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    pub command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug)]
-enum Commands {
+pub enum Commands {
     /// Commands related to the web server.
     Server {
         #[command(subcommand)]
@@ -19,7 +19,7 @@ enum Commands {
 
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
-enum ServerCommands {
+pub enum ServerCommands {
     /// Starts the web server.
     Start,
     /// Stops the web server.

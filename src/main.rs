@@ -6,6 +6,7 @@ use dotenv::dotenv;
 use server::Server;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Notify;
+use tokio::signal;
 
 #[tokio::main]
 async fn main() {
@@ -31,21 +32,11 @@ async fn main() {
             match command {
                 Some(cli::ServerCommands::Start) => {
                     let mut srv = server.lock().unwrap();
-                    if srv.is_running() {
-                        println!("Server is already running.");
-                    } else {
-                        srv.start(notify.clone()).await;
-                        println!("Server started.");
-                    }
+                    srv.start(notify.clone()).await;
                 }
                 Some(cli::ServerCommands::Stop) => {
                     let mut srv = server.lock().unwrap();
-                    if srv.is_running() {
-                        srv.stop().await;
-                        println!("Server stopped.");
-                    } else {
-                        println!("Server is not running.");
-                    }
+                    srv.stop().await;
                 }
                 Some(cli::ServerCommands::Status) => {
                     let srv = server.lock().unwrap();
@@ -62,6 +53,19 @@ async fn main() {
         }
         None => {
             println!("No command provided.");
+        }
+    }
+
+    loop {
+        tokio::select! {
+            _ = signal::ctrl_c() => {
+                println!("Received Ctrl+C, shutting down.");
+                let mut srv = server.lock().unwrap();
+                if srv.is_running() {
+                    srv.stop().await;
+                }
+                break;
+            }
         }
     }
 }
