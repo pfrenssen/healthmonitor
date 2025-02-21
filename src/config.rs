@@ -1,5 +1,5 @@
-use std::{env, fmt};
 use std::sync::LazyLock;
+use std::{env, fmt};
 
 pub struct Config {
     pub server: ServerConfig,
@@ -7,11 +7,15 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Self {
-        let address = env::var("HEALTHMONITOR_SERVER_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
-        let port = env::var("HEALTHMONITOR_SERVER_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(8080);
+        let address =
+            env::var("HEALTHMONITOR_SERVER_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let port = env::var("HEALTHMONITOR_SERVER_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080);
 
         Config {
-            server: ServerConfig { address, port }
+            server: ServerConfig { address, port },
         }
     }
 }

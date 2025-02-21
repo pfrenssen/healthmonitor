@@ -31,27 +31,25 @@ async fn main() {
 
     let mut server_started = false;
     match args.command {
-        Some(cli::Commands::Server { command }) => {
-            match command {
-                Some(cli::ServerCommands::Start) => {
-                    let mut srv = server.lock().await;
-                    match srv.start().await {
-                        Ok(_) => server_started = true,
-                        Err(_) => exit(1),
-                    }
+        Some(cli::Commands::Server { command }) => match command {
+            Some(cli::ServerCommands::Start) => {
+                let mut srv = server.lock().await;
+                match srv.start().await {
+                    Ok(_) => server_started = true,
+                    Err(_) => exit(1),
                 }
-                Some(cli::ServerCommands::Status) => {
-                    let srv = server.lock().await;
-                    if srv.is_running().await {
-                        println!("running");
-                    } else {
-                        println!("not running");
-                        exit(1);
-                    }
-                }
-                None => {}
             }
-        }
+            Some(cli::ServerCommands::Status) => {
+                let srv = server.lock().await;
+                if srv.is_running().await {
+                    println!("running");
+                } else {
+                    println!("not running");
+                    exit(1);
+                }
+            }
+            None => {}
+        },
         None => {}
     }
 

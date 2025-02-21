@@ -1,14 +1,18 @@
-use std::process::Stdio;
-use std::sync::{Arc};
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
 use serial_test::serial;
+use std::process::Stdio;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::sync::Notify;
 
-async fn start_server() -> (tokio::process::Child, Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>, Arc<Notify>) {
+async fn start_server() -> (
+    tokio::process::Child,
+    Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
+    Arc<Notify>,
+) {
     // Run `cargo run -- server start` as a child process.
     let mut server = Command::new("cargo")
         .args(&["run", "--", "server", "start"])
@@ -17,7 +21,10 @@ async fn start_server() -> (tokio::process::Child, Arc<Mutex<tokio::io::Lines<Bu
         .expect("The command to start the server should spawn a child process.");
 
     // Capture the server's log output on stderr.
-    let stderr = server.stderr.take().expect("Stderr output should be captured.");
+    let stderr = server
+        .stderr
+        .take()
+        .expect("Stderr output should be captured.");
     let reader = BufReader::new(stderr);
     let lines = Arc::new(Mutex::new(reader.lines()));
 
@@ -39,7 +46,10 @@ async fn start_server() -> (tokio::process::Child, Arc<Mutex<tokio::io::Lines<Bu
     (server, lines, notify)
 }
 
-async fn server_status() -> (tokio::process::Child, Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>) {
+async fn server_status() -> (
+    tokio::process::Child,
+    Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>,
+) {
     // Run `cargo run -- server status` as a child process.
     let mut status_command = Command::new("cargo")
         .args(&["run", "--", "server", "status"])
@@ -48,7 +58,10 @@ async fn server_status() -> (tokio::process::Child, Arc<Mutex<tokio::io::Lines<B
         .expect("The command to check the server status should spawn a child process.");
 
     // Capture the server's log output on stderr.
-    let stderr = status_command.stdout.take().expect("Stdout output should be captured.");
+    let stderr = status_command
+        .stdout
+        .take()
+        .expect("Stdout output should be captured.");
     let reader = BufReader::new(stderr);
     let lines = Arc::new(Mutex::new(reader.lines()));
 
@@ -56,15 +69,25 @@ async fn server_status() -> (tokio::process::Child, Arc<Mutex<tokio::io::Lines<B
 }
 
 async fn stop_server(server: &mut tokio::process::Child) {
-    let pid = Pid::from_raw(server.id().expect("The server process should be running and have a process ID.") as i32);
+    let pid = Pid::from_raw(
+        server
+            .id()
+            .expect("The server process should be running and have a process ID.") as i32,
+    );
     kill(pid, Signal::SIGINT).expect("The SIGINT signal should be sent.");
 
     // Wait for the server to shut down.
-    let status = server.wait().await.expect("The server process should exit.");
+    let status = server
+        .wait()
+        .await
+        .expect("The server process should exit.");
     assert!(status.success(), "Server did not shut down gracefully");
 }
 
-async fn check_log_output_regex(lines: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>, regex_expected_lines: Vec<&str>) {
+async fn check_log_output_regex(
+    lines: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
+    regex_expected_lines: Vec<&str>,
+) {
     let mut captured_lines = Vec::new();
     while let Ok(Some(line)) = lines.lock().await.next_line().await {
         captured_lines.push(line);
@@ -77,8 +100,10 @@ async fn check_log_output_regex(lines: Arc<Mutex<tokio::io::Lines<BufReader<toki
     }
 }
 
-async fn check_log_output<T>(lines: Arc<Mutex<tokio::io::Lines<BufReader<T>>>>, expected_lines: Vec<&str>)
-where
+async fn check_log_output<T>(
+    lines: Arc<Mutex<tokio::io::Lines<BufReader<T>>>>,
+    expected_lines: Vec<&str>,
+) where
     T: tokio::io::AsyncRead + Unpin,
 {
     let mut captured_lines = Vec::new();
@@ -115,8 +140,14 @@ async fn test_server_status() {
     check_log_output(lines.clone(), expected_lines).await;
 
     // The status command should exit with an error code.
-    let status = status_command.wait().await.expect("The status command should exit.");
-    assert!(!status.success(), "The status command should exit with an error code if the server is not running.");
+    let status = status_command
+        .wait()
+        .await
+        .expect("The status command should exit.");
+    assert!(
+        !status.success(),
+        "The status command should exit with an error code if the server is not running."
+    );
 
     // Start the server.
     let (mut server, _, _notify) = start_server().await;
@@ -127,8 +158,14 @@ async fn test_server_status() {
     check_log_output(lines.clone(), expected_lines).await;
 
     // The status command should exit with a success code.
-    let status = status_command.wait().await.expect("The status command should exit.");
-    assert!(status.success(), "The status command should exit with a success code if the server is running.");
+    let status = status_command
+        .wait()
+        .await
+        .expect("The status command should exit.");
+    assert!(
+        status.success(),
+        "The status command should exit with a success code if the server is running."
+    );
 
     // Stop the server. The status command should return `not running` again.
     stop_server(&mut server).await;
@@ -136,6 +173,12 @@ async fn test_server_status() {
     let (mut server_status, lines) = server_status().await;
     let expected_lines = vec!["not running"];
     check_log_output(lines.clone(), expected_lines).await;
-    let status = server_status.wait().await.expect("The status command should exit.");
-    assert!(!status.success(), "The status command should exit with an error code if the server is not running.");
+    let status = server_status
+        .wait()
+        .await
+        .expect("The status command should exit.");
+    assert!(
+        !status.success(),
+        "The status command should exit with an error code if the server is not running."
+    );
 }

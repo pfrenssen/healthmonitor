@@ -46,9 +46,7 @@ impl Server {
             }
         };
         self.handle = Some(tokio::spawn(async move {
-            axum::serve(listener, app)
-                .await
-                .unwrap();
+            axum::serve(listener, app).await.unwrap();
         }));
         info!("Server started.");
         Ok(())
@@ -70,7 +68,10 @@ impl Server {
             return true;
         }
 
-        let addr = format!("http://{}:{}/info", CONFIG.server.address, CONFIG.server.port);
+        let addr = format!(
+            "http://{}:{}/info",
+            CONFIG.server.address, CONFIG.server.port
+        );
         let client = Client::new();
 
         if let Ok(response) = client.get(&addr).send().await {
@@ -78,7 +79,8 @@ impl Server {
                 if let Ok(body) = response.text().await {
                     let name = env!("CARGO_PKG_NAME");
                     let version = env!("CARGO_PKG_VERSION");
-                    let expected_body = format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version);
+                    let expected_body =
+                        format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version);
                     return body == expected_body;
                 }
             }
