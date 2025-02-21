@@ -12,12 +12,12 @@ log = "0.4.25"
 reqwest = "0.12.12"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
+thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["macros", "rt", "rt-multi-thread", "signal"] }
 tower-http = { version = "0.6.2", features = ["trace"] }
 
 [dev-dependencies]
 nix = { version = "0.29.0", features = ["signal"] }
-port_check = "0.2.1"
 regex = "1.11.1"
 serial_test = "3.2.0"
 tokio = { version = "1.43.0", features = ["process"] }

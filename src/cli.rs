@@ -15,6 +15,7 @@ pub enum Commands {
         #[command(subcommand)]
         command: Option<ServerCommands>,
     },
+    Status,
 }
 
 #[derive(Subcommand, Debug)]

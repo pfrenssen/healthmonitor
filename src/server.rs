@@ -1,9 +1,9 @@
+use crate::client;
 use crate::config::CONFIG;
 use crate::status::HealthStatus;
 
 use axum::{routing::get, Router};
 use log::{debug, error, info, warn};
-use reqwest::Client;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
@@ -68,25 +68,7 @@ impl Server {
             return true;
         }
 
-        let addr = format!(
-            "http://{}:{}/info",
-            CONFIG.server.address, CONFIG.server.port
-        );
-        let client = Client::new();
-
-        if let Ok(response) = client.get(&addr).send().await {
-            if response.status().is_success() {
-                if let Ok(body) = response.text().await {
-                    let name = env!("CARGO_PKG_NAME");
-                    let version = env!("CARGO_PKG_VERSION");
-                    let expected_body =
-                        format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version);
-                    return body == expected_body;
-                }
-            }
-        }
-
-        false
+        client::is_running().await
     }
 }
 

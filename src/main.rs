@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod server;
 mod status;
+mod client;
 
 use crate::status::HealthStatus;
 
@@ -26,9 +27,24 @@ async fn main() {
     let args = cli::Cli::parse();
     debug!("Parsed args: {:?}", args);
 
-    let status = Arc::new(Mutex::new(HealthStatus::new()));
+    // Initialize the server and status.
+    let mut status = Arc::new(Mutex::new(HealthStatus::new()));
     let server = Arc::new(Mutex::new(Server::new(status.clone())));
 
+    // Check if the server is already running in another process. If it is, update the status.
+    // Todo: integrate the status of our running server in the HealthStatus struct?
+    debug!("Checking if our server is already running.");
+    let mut server_running = false;
+    if client::is_running().await {
+        if let Ok(s) = client::get_status().await {
+            let mut status = status.lock().await;
+            *status = s;
+            server_running = true;
+        }
+    }
+    debug!("Health monitor server is {}. Application is {}.", if server_running { "online" } else { "offline" }, status.lock().await.to_string());
+
+    // Todo: We can keep track of the server status in an enum: Offline, Online, Started.
     let mut server_started = false;
     match args.command {
         Some(cli::Commands::Server { command }) => match command {
@@ -40,8 +56,7 @@ async fn main() {
                 }
             }
             Some(cli::ServerCommands::Status) => {
-                let srv = server.lock().await;
-                if srv.is_running().await {
+                if server_running {
                     println!("running");
                 } else {
                     println!("not running");
@@ -50,6 +65,10 @@ async fn main() {
             }
             None => {}
         },
+        Some(cli::Commands::Status) => {
+            let status = status.lock().await;
+            println!("{}", status.to_string());
+        }
         None => {}
     }
 
