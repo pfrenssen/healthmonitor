@@ -22,8 +22,6 @@ pub enum Commands {
 pub enum ServerCommands {
     /// Starts the web server.
     Start,
-    /// Stops the web server.
-    Stop,
     /// Returns the current status of the web server.
     Status,
 }

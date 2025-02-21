@@ -38,10 +38,6 @@ async fn main() {
                         Err(_) => exit(1),
                     }
                 }
-                Some(cli::ServerCommands::Stop) => {
-                    let mut srv = server.lock().unwrap();
-                    srv.stop().await;
-                }
                 Some(cli::ServerCommands::Status) => {
                     let srv = server.lock().unwrap();
                     if srv.is_running().await {

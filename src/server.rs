@@ -56,8 +56,6 @@ impl Server {
     }
 
     pub async fn stop(&mut self) {
-        // Todo: If the handle exists, abort it. Otherwise, check if the server is running in
-        //   another process, and send a POST request to /shutdown to stop the server.
         if !self.is_running().await {
             return;
         }
@@ -65,7 +63,7 @@ impl Server {
         if let Some(handle) = self.handle.take() {
             handle.abort();
         }
-        println!("Server stopped.");
+        info!("Server stopped.");
     }
 
     pub async fn is_running(&self) -> bool {
