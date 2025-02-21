@@ -10,7 +10,7 @@ use dotenv::dotenv;
 use log::{debug, info};
 use server::Server;
 use std::sync::{Arc, Mutex};
-use tokio::signal;
+use tokio::signal::unix::{signal, SignalKind};
 use crate::status::HealthStatus;
 
 #[tokio::main]
@@ -63,10 +63,12 @@ async fn main() {
     }
 
     // The server has been started, keep it running until a Ctrl+C signal is received.
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    debug!("Waiting for SIGINT signal");
     loop {
         tokio::select! {
-            _ = signal::ctrl_c() => {
-                info!("Received Ctrl+C, shutting down.");
+            _ = sigint.recv() => {
+                info!("Received SIGINT, shutting down.");
                 let mut srv = server.lock().unwrap();
                 srv.stop().await;
                 break;
