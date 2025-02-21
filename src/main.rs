@@ -3,15 +3,17 @@ mod config;
 mod server;
 mod status;
 
-use std::process::exit;
+use crate::status::HealthStatus;
+
 use clap::Parser;
 use config::CONFIG;
 use dotenv::dotenv;
 use log::{debug, info};
 use server::Server;
-use std::sync::{Arc, Mutex};
+use std::process::exit;
+use std::sync::Arc;
 use tokio::signal::unix::{signal, SignalKind};
-use crate::status::HealthStatus;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
@@ -32,14 +34,14 @@ async fn main() {
         Some(cli::Commands::Server { command }) => {
             match command {
                 Some(cli::ServerCommands::Start) => {
-                    let mut srv = server.lock().unwrap();
+                    let mut srv = server.lock().await;
                     match srv.start().await {
                         Ok(_) => server_started = true,
                         Err(_) => exit(1),
                     }
                 }
                 Some(cli::ServerCommands::Status) => {
-                    let srv = server.lock().unwrap();
+                    let srv = server.lock().await;
                     if srv.is_running().await {
                         println!("running");
                     } else {
@@ -65,7 +67,7 @@ async fn main() {
         tokio::select! {
             _ = sigint.recv() => {
                 info!("Received SIGINT, shutting down.");
-                let mut srv = server.lock().unwrap();
+                let mut srv = server.lock().await;
                 srv.stop().await;
                 break;
             }
@@ -77,7 +79,7 @@ async fn main() {
 async fn toggle_status_periodically(status: Arc<Mutex<HealthStatus>>) {
     loop {
         {
-            let mut status = status.lock().unwrap();
+            let mut status = status.lock().await;
             status.healthy = !status.healthy;
             info!("Toggled status to {}", status.to_string());
         }

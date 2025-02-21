@@ -38,4 +38,4 @@ impl fmt::Debug for ServerConfig {
     }
 }
 
-pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::new());
+pub static CONFIG: LazyLock<Config> = LazyLock::new(Config::new);

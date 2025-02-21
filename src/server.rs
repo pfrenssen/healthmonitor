@@ -1,15 +1,14 @@
-use std::sync::{Arc, Mutex};
-use axum::{
-    routing::get,
-    Router,
-};
 use crate::config::CONFIG;
+use crate::status::HealthStatus;
+
+use axum::{routing::get, Router};
 use log::{debug, error, info, warn};
 use reqwest::Client;
+use std::sync::Arc;
 use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
-use crate::status::HealthStatus;
 
 pub struct Server {
     handle: Option<JoinHandle<()>>,
@@ -74,18 +73,15 @@ impl Server {
         let addr = format!("http://{}:{}/info", CONFIG.server.address, CONFIG.server.port);
         let client = Client::new();
 
-        match client.get(&addr).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    if let Ok(body) = response.text().await {
-                        let name = env!("CARGO_PKG_NAME");
-                        let version = env!("CARGO_PKG_VERSION");
-                        let expected_body = format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version);
-                        return body == expected_body;
-                    }
+        if let Ok(response) = client.get(&addr).send().await {
+            if response.status().is_success() {
+                if let Ok(body) = response.text().await {
+                    let name = env!("CARGO_PKG_NAME");
+                    let version = env!("CARGO_PKG_VERSION");
+                    let expected_body = format!("{{\"name\": \"{}\", \"version\": \"{}\"}}", name, version);
+                    return body == expected_body;
                 }
             }
-            Err(_) => {}
         }
 
         false
@@ -96,7 +92,7 @@ impl Server {
 async fn status(status: Arc<Mutex<HealthStatus>>) -> String {
     use serde_json::to_string;
 
-    let status = status.lock().unwrap();
+    let status = status.lock().await;
     to_string(&*status).unwrap()
 }
 
