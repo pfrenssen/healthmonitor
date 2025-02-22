@@ -7,6 +7,7 @@ use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::sync::Notify;
 
+#[allow(dead_code)] // Not dead code, used in tests.
 pub async fn start_server() -> (
     tokio::process::Child,
     Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
@@ -14,7 +15,7 @@ pub async fn start_server() -> (
 ) {
     // Run `cargo run -- server start` as a child process.
     let mut server = Command::new("cargo")
-        .args(&["run", "--", "server", "start"])
+        .args(["run", "--", "server", "start"])
         .stderr(Stdio::piped())
         .spawn()
         .expect("The command to start the server should spawn a child process.");
@@ -45,13 +46,14 @@ pub async fn start_server() -> (
     (server, lines, notify)
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 pub async fn server_status() -> (
     tokio::process::Child,
     Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>,
 ) {
     // Run `cargo run -- server status` as a child process.
     let mut status_command = Command::new("cargo")
-        .args(&["run", "--", "server", "status"])
+        .args(["run", "--", "server", "status"])
         .stdout(Stdio::piped())
         .spawn()
         .expect("The command to check the server status should spawn a child process.");
@@ -67,6 +69,7 @@ pub async fn server_status() -> (
     (status_command, lines)
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 pub async fn stop_server(server: &mut tokio::process::Child) {
     let pid = Pid::from_raw(
         server
@@ -83,6 +86,7 @@ pub async fn stop_server(server: &mut tokio::process::Child) {
     assert!(status.success(), "Server did not shut down gracefully");
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 pub async fn check_log_output_regex(
     lines: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
     regex_expected_lines: Vec<&str>,
