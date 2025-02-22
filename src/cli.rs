@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[command(name = "healthmonitor")]
@@ -15,7 +16,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: Option<ServerCommands>,
     },
-    Status,
+    /// Commands for getting and setting the health status of the monitored application.
+    Status {
+        #[command(subcommand)]
+        command: Option<StatusCommands>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -25,4 +30,35 @@ pub enum ServerCommands {
     Start,
     /// Returns the current status of the web server.
     Status,
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum StatusCommands {
+    /// Returns the current health status of the monitored application.
+    Get,
+    /// Sets the health status of the monitored application.
+    Set {
+        /// The new health status of the monitored application.
+        #[arg(short, long)]
+        status: HealthState,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum HealthState {
+    Healthy,
+    Unhealthy,
+}
+
+impl FromStr for HealthState {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "healthy" => Ok(HealthState::Healthy),
+            "unhealthy" => Ok(HealthState::Unhealthy),
+            _ => Err(format!("Invalid status: {}", s)),
+        }
+    }
 }

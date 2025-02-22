@@ -1,9 +1,9 @@
 mod helpers;
 
-use std::process::Stdio;
-use std::sync::Arc;
 use helpers::*;
 use serial_test::serial;
+use std::process::Stdio;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 /// Check that the health status returns 'healthy' or 'unhealthy' as expected.
 pub async fn assert_status(expected_status: bool) {
     let mut status_command = Command::new("cargo")
-        .args(&["run", "--", "status"])
+        .args(&["run", "--", "status", "get"])
         .stdout(Stdio::piped())
         .spawn()
         .expect("The command to check the status should spawn a child process.");

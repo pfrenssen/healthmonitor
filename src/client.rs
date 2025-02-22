@@ -1,6 +1,6 @@
 /// This module contains an HTTP client that queries our own server.
 use crate::config::CONFIG;
-use crate::status::HealthStatus;
+use crate::status::Status;
 
 use log::debug;
 use reqwest::Client;
@@ -27,7 +27,7 @@ pub async fn is_running() -> bool {
 }
 
 /// Retrieve the health status from the server.
-pub async fn get_status() -> Result<HealthStatus, ClientError> {
+pub async fn get_status() -> Result<Status, ClientError> {
     let json = get("status").await?;
     let status = serde_json::from_str(&json)?;
     Ok(status)
