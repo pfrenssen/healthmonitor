@@ -1,5 +1,5 @@
-use std::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Deserialize, Serialize)]
 // Todo: We should make the health field private and provide accessors, so we can propagate the
