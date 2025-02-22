@@ -1,10 +1,10 @@
 mod cli;
+mod client;
 mod config;
 mod server;
 mod status;
-mod client;
 
-use crate::status::HealthStatus;
+use crate::status::{HealthState, Status};
 
 use clap::Parser;
 use config::CONFIG;
@@ -28,7 +28,10 @@ async fn main() {
     debug!("Parsed args: {:?}", args);
 
     // Initialize the server and status.
-    let mut status = Arc::new(Mutex::new(HealthStatus::new()));
+    // Todo: Rethink how to use the status. Currently we have a local status and a status in the
+    //   server. Probably we should only rely on the server status and fully communicate over the
+    //   client.
+    let status = Arc::new(Mutex::new(Status::new()));
     let server = Arc::new(Mutex::new(Server::new(status.clone())));
 
     // Check if the server is already running in another process. If it is, update the status.
@@ -42,7 +45,11 @@ async fn main() {
             server_running = true;
         }
     }
-    debug!("Health monitor server is {}. Application is {}.", if server_running { "online" } else { "offline" }, status.lock().await.to_string());
+    debug!(
+        "Health monitor server is {}. Application is {}.",
+        if server_running { "online" } else { "offline" },
+        status.lock().await.to_string()
+    );
 
     // Todo: We can keep track of the server status in an enum: Offline, Online, Started.
     let mut server_started = false;
@@ -65,10 +72,21 @@ async fn main() {
             }
             None => {}
         },
-        Some(cli::Commands::Status) => {
-            let status = status.lock().await;
-            println!("{}", status.to_string());
-        }
+        Some(cli::Commands::Status { command }) => match command {
+            Some(cli::StatusCommands::Get) => {
+                let status = status.lock().await;
+                println!("{}", status);
+            }
+            Some(cli::StatusCommands::Set {
+                status: health_status,
+            }) => {
+                // Todo: We should use the HTTP client to patch the status.
+                let mut status = status.lock().await;
+                status.health = health_status.into();
+                println!("{}", status);
+            }
+            None => {}
+        },
         None => {}
     }
 
@@ -93,11 +111,15 @@ async fn main() {
     }
 }
 
-async fn toggle_status_periodically(status: Arc<Mutex<HealthStatus>>) {
+async fn toggle_status_periodically(status: Arc<Mutex<Status>>) {
     loop {
         {
             let mut status = status.lock().await;
-            status.healthy = !status.healthy;
+            status.health = if status.health == HealthState::Healthy {
+                HealthState::Unhealthy
+            } else {
+                HealthState::Healthy
+            };
             info!("Toggled status to {}", status.to_string());
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;

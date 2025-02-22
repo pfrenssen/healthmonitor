@@ -1,6 +1,6 @@
 use crate::client;
 use crate::config::CONFIG;
-use crate::status::HealthStatus;
+use crate::status::Status;
 
 use axum::{routing::get, Router};
 use log::{debug, error, info, warn};
@@ -12,11 +12,11 @@ use tower_http::trace::TraceLayer;
 
 pub struct Server {
     handle: Option<JoinHandle<()>>,
-    status: Arc<Mutex<HealthStatus>>,
+    status: Arc<Mutex<Status>>,
 }
 
 impl Server {
-    pub fn new(status: Arc<Mutex<HealthStatus>>) -> Self {
+    pub fn new(status: Arc<Mutex<Status>>) -> Self {
         Server {
             handle: None,
             status,
@@ -63,7 +63,7 @@ impl Server {
         info!("Server stopped.");
     }
 
-    pub async fn is_running(&self) -> bool {
+    async fn is_running(&self) -> bool {
         if self.handle.is_some() {
             return true;
         }
@@ -73,7 +73,7 @@ impl Server {
 }
 
 /// Returns the current health status of the monitored application.
-async fn status(status: Arc<Mutex<HealthStatus>>) -> String {
+async fn status(status: Arc<Mutex<Status>>) -> String {
     use serde_json::to_string;
 
     let status = status.lock().await;
