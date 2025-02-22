@@ -1,0 +1,58 @@
+name: Validate and test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check rustup version.
+        run: rustup --version
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Check Cargo version.
+        run: cargo --version
+      - name: Check Rust version.
+        run: rustc --version
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Compile
+        run: cargo build --verbose
+      - name: Setup .env file
+        run: cp .env.example .env
+      - name: Test
+        run: cargo test --all-targets --all-features --verbose
+
+  code_style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Check Rustfmt version
+        run: cargo fmt --version
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Check Clippy version
+        run: cargo clippy --version
+      - name: Lint
+        run: cargo clippy --all-features --all-targets -- -D warnings
+
+  check_dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Check cargo-outdated version
+        run: cargo outdated --version
+      - name: Check for outdated dependencies
+        run: cargo outdated -R --exit-code 1
