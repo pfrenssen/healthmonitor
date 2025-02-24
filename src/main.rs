@@ -85,15 +85,16 @@ async fn main() {
                     exit(1);
                 }
             },
-            Some(cli::StatusCommands::Set { health_state }) => {
-                match client::set_health_state(health_state.into()).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        eprintln!("Failed to set status: {}", e);
-                        exit(1);
-                    }
+            Some(cli::StatusCommands::Set {
+                health_state,
+                message,
+            }) => match client::set_health_state(health_state.into(), message).await {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Failed to set status: {}", e);
+                    exit(1);
                 }
-            }
+            },
             None => {}
         },
         None => {}

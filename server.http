@@ -24,12 +24,13 @@ Content-Type: application/json
 ###
 
 ###
-# Set the health status of the monitored application to unhealthy.
+# Set the health status of the monitored application to unhealthy with a custom message.
 PATCH {{ base_url }}/status
 Content-Type: application/json
 
 {
-  "health": "unhealthy"
+  "health": "unhealthy",
+  "message": "Database cannot be reached."
 }
 ###
 

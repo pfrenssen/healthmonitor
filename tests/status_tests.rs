@@ -95,20 +95,36 @@ async fn test_status() {
     assert_status(true).await;
 
     // Manually toggle the status to unhealthy. The status should then be reported as unhealthy.
-    let options = vec!["--health-state=unhealthy".to_string()];
+    let options = vec!["unhealthy".to_string()];
     let (update_status_command, _stdout, _stderr) =
         execute_status_command(StatusCommands::Set, options).await;
     assert_exit_code(update_status_command, 0).await;
     assert_status(false).await;
 
     // Toggle back to healthy.
-    let options = vec!["--health-state=healthy".to_string()];
+    let options = vec!["healthy".to_string()];
     let (update_status_command, _stdout, _stderr) =
         execute_status_command(StatusCommands::Set, options).await;
     assert_exit_code(update_status_command, 0).await;
     assert_status(true).await;
 
-    // Stop the server. We should get an error code again.
+    // Toggle to unhealthy with a custom message.
+    let options = vec![
+        "unhealthy".to_string(),
+        "--message=Apache is not running".to_string(),
+    ];
+    let (update_status_command, _stdout, _stderr) =
+        execute_status_command(StatusCommands::Set, options).await;
+    assert_exit_code(update_status_command, 0).await;
+
+    // When we now get the status, we should see the custom message.
+    let (status_command, stdout, _stderr) =
+        execute_status_command(StatusCommands::Get, [].to_vec()).await;
+    let expected_lines = vec!["unhealthy: Apache is not running"];
+    check_log_output(stdout.clone(), expected_lines).await;
+    assert_exit_code(status_command, 1).await;
+
+    // Stop the server. We should get an error when we try to get the status.
     server.stop().await;
 
     let (status_command, _, lines) = execute_status_command(StatusCommands::Get, [].to_vec()).await;

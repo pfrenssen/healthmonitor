@@ -95,7 +95,7 @@ async fn patch_status(status: Arc<Mutex<Status>>, payload: Value) -> Response {
     // Check if the payload is valid for a Status struct, otherwise return a 400 error.
     // Since this is a PATCH request, the payload might be a partial struct.
     // Todo: Check if the payload contains any keys that are not in the Status struct.
-    // Todo: Implement 'message' and 'deployment_state' keys.
+    // Todo: Implement setting the deployment_state.
 
     let mut status = status.lock().await;
 
@@ -115,6 +115,17 @@ async fn patch_status(status: Arc<Mutex<Status>>, payload: Value) -> Response {
         } else {
             debug!("Invalid health state: {:?}", health);
             return (StatusCode::BAD_REQUEST, "Invalid health state.").into_response();
+        }
+    }
+
+    // If the 'message' key is present, append the message.
+    if let Some(message) = payload.get("message") {
+        if let Some(message_str) = message.as_str() {
+            debug!("Appending message: {}", message_str);
+            status.add_message(message_str.to_string());
+        } else {
+            debug!("Invalid message: {:?}", message);
+            return (StatusCode::BAD_REQUEST, "Invalid message.").into_response();
         }
     }
 

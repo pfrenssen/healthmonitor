@@ -37,9 +37,18 @@ pub async fn get_status() -> Result<Status, ClientError> {
 }
 
 /// Sets the health status on the server.
-pub async fn set_health_state(state: HealthState) -> Result<(), ClientError> {
-    debug!("Setting health state: {}", state);
-    let json = serde_json::json!({"health": state});
+pub async fn set_health_state(
+    state: HealthState,
+    message: Option<String>,
+) -> Result<(), ClientError> {
+    debug!(
+        "Setting health state: {} with message: {:?}",
+        state, message
+    );
+    let mut json = serde_json::json!({"health": state});
+    if let Some(message) = message {
+        json["message"] = serde_json::json!(message);
+    }
     patch("status", &json.to_string()).await?;
     Ok(())
 }
