@@ -7,19 +7,21 @@ use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::sync::Notify;
 
+#[allow(dead_code)] // Not dead code, used in tests.
 pub struct TestServer {
     server: tokio::process::Child,
-    stdout: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>,
-    stderr: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
+    pub stdout: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>,
+    pub stderr: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
 }
 
 impl Drop for TestServer {
     fn drop(&mut self) {
-        let server_id = self.server.id().expect("The server process should be running and have a process ID.");
-        tokio::task::spawn_blocking(move || {
-            let pid = Pid::from_raw(server_id as i32);
-            kill(pid, Signal::SIGINT).expect("The SIGINT signal should be sent.");
-        });
+        if let Some(server_id) = self.server.id() {
+            tokio::task::spawn_blocking(move || {
+                let pid = Pid::from_raw(server_id as i32);
+                kill(pid, Signal::SIGINT).expect("The SIGINT signal should be sent.");
+            });
+        }
     }
 }
 
@@ -28,10 +30,13 @@ impl TestServer {
         let (server, stdout, stderr, _notify) = start_server().await;
         TestServer { server, stdout, stderr }
     }
+
+    pub async fn stop(&mut self) {
+        stop_server(&mut self.server).await;
+    }
 }
 
-#[allow(dead_code)] // Not dead code, used in tests.
-pub async fn start_server() -> (
+async fn start_server() -> (
     tokio::process::Child,
     Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>,
     Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
@@ -77,6 +82,22 @@ pub async fn start_server() -> (
     (server, stdout_lines, stderr_lines, notify)
 }
 
+async fn stop_server(server: &mut tokio::process::Child) {
+    let pid = Pid::from_raw(
+        server
+            .id()
+            .expect("The server process should be running and have a process ID.") as i32,
+    );
+    kill(pid, Signal::SIGINT).expect("The SIGINT signal should be sent.");
+
+    // Wait for the server to shut down.
+    let status = server
+        .wait()
+        .await
+        .expect("The server process should exit.");
+    assert!(status.success(), "Server did not shut down gracefully");
+}
+
 #[allow(dead_code)] // Not dead code, used in tests.
 pub async fn server_status() -> (
     tokio::process::Child,
@@ -101,27 +122,12 @@ pub async fn server_status() -> (
 }
 
 #[allow(dead_code)] // Not dead code, used in tests.
-pub async fn stop_server(server: &mut tokio::process::Child) {
-    let pid = Pid::from_raw(
-        server
-            .id()
-            .expect("The server process should be running and have a process ID.") as i32,
-    );
-    kill(pid, Signal::SIGINT).expect("The SIGINT signal should be sent.");
-
-    // Wait for the server to shut down.
-    let status = server
-        .wait()
-        .await
-        .expect("The server process should exit.");
-    assert!(status.success(), "Server did not shut down gracefully");
-}
-
-#[allow(dead_code)] // Not dead code, used in tests.
-pub async fn check_log_output_regex(
-    lines: Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStderr>>>>,
+pub async fn check_log_output_regex<T>(
+    lines: Arc<Mutex<tokio::io::Lines<BufReader<T>>>>,
     regex_expected_lines: Vec<&str>,
-) {
+) where
+    T: tokio::io::AsyncRead + Unpin,
+{
     let mut captured_lines = Vec::new();
     while let Ok(Some(line)) = lines.lock().await.next_line().await {
         captured_lines.push(line);
