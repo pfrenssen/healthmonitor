@@ -1,3 +1,4 @@
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -44,7 +45,7 @@ pub enum DeploymentState {
     Running,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub enum HealthState {
     Healthy,
     Unhealthy,
@@ -55,6 +56,15 @@ impl From<crate::cli::HealthState> for HealthState {
         match arg {
             crate::cli::HealthState::Healthy => HealthState::Healthy,
             crate::cli::HealthState::Unhealthy => HealthState::Unhealthy,
+        }
+    }
+}
+
+impl From<HealthState> for StatusCode {
+    fn from(health: HealthState) -> Self {
+        match health {
+            HealthState::Healthy => StatusCode::OK,
+            HealthState::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
         }
     }
 }
