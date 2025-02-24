@@ -504,6 +504,7 @@ dependencies = [
  "clap",
  "dotenv",
  "env_logger",
+ "http-body-util",
  "log",
  "nix",
  "regex",
@@ -513,6 +514,7 @@ dependencies = [
  "serial_test",
  "thiserror",
  "tokio",
+ "tower",
  "tower-http",
 ]
 

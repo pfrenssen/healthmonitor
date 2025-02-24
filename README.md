@@ -74,6 +74,7 @@ default port is `8080`.
 
 Check if the server is running: http://127.0.0.1:8080/info
 
-Get the current health status of the application: http://127.0.0.1:8080/status
+Get the current health status of the application: http://127.0.0.1:8080/status - it will return 200 OK if the
+application is healthy, and 503 Service Unavailable if the application is unhealthy.
 
 The available REST endpoints are documented in [server.http](https://github.com/pfrenssen/healthmonitor/blob/master/server.http).
