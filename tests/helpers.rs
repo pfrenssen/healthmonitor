@@ -156,3 +156,21 @@ pub async fn check_log_output<T>(
         assert!(found, "The output contains the line '{}'.", expected_line);
     }
 }
+
+/// Asserts that the given command exits with the expected exit code.
+#[allow(dead_code)] // Not dead code, used in tests.
+pub async fn assert_exit_code(
+    mut command: tokio::process::Child,
+    expected_exit_code: i32,
+) {
+    let status = command
+        .wait()
+        .await
+        .expect("The command should exit.");
+    assert_eq!(
+        status.code().unwrap_or(-1),
+        expected_exit_code,
+        "The command should exit with code {}.",
+        expected_exit_code
+    );
+}

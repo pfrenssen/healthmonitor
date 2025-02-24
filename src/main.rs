@@ -74,8 +74,19 @@ async fn main() {
         },
         Some(cli::Commands::Status { command }) => match command {
             Some(cli::StatusCommands::Get) => {
-                let status = status.lock().await;
-                println!("{}", status);
+                match client::get_status().await {
+                    Ok(status) => {
+                        println!("{}", status);
+                        if status.health == HealthState::Unhealthy {
+                            exit(1);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to get status: {}", e);
+                        exit(1);
+                    }
+                }
+
             }
             Some(cli::StatusCommands::Set {
                 status: health_status,
@@ -95,7 +106,8 @@ async fn main() {
         return;
     }
 
-    // The server has been started, keep it running until a Ctrl+C signal is received.
+    // The server has been started, keep it running alongside the monitoring threads until a Ctrl+C
+    // signal is received.
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     debug!("Waiting for SIGINT signal");
     loop {
@@ -114,6 +126,7 @@ async fn main() {
 async fn toggle_status_periodically(status: Arc<Mutex<Status>>) {
     loop {
         {
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             let mut status = status.lock().await;
             status.health = if status.health == HealthState::Healthy {
                 HealthState::Unhealthy
@@ -122,6 +135,5 @@ async fn toggle_status_periodically(status: Arc<Mutex<Status>>) {
             };
             info!("Toggled status to {}", status.to_string());
         }
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
     }
 }
