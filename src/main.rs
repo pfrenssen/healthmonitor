@@ -73,28 +73,26 @@ async fn main() {
             None => {}
         },
         Some(cli::Commands::Status { command }) => match command {
-            Some(cli::StatusCommands::Get) => {
-                match client::get_status().await {
-                    Ok(status) => {
-                        println!("{}", status);
-                        if status.health == HealthState::Unhealthy {
-                            exit(1);
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to get status: {}", e);
+            Some(cli::StatusCommands::Get) => match client::get_status().await {
+                Ok(status) => {
+                    println!("{}", status);
+                    if status.health == HealthState::Unhealthy {
                         exit(1);
                     }
                 }
-
-            }
-            Some(cli::StatusCommands::Set {
-                status: health_status,
-            }) => {
-                // Todo: We should use the HTTP client to patch the status.
-                let mut status = status.lock().await;
-                status.health = health_status.into();
-                println!("{}", status);
+                Err(e) => {
+                    eprintln!("Failed to get status: {}", e);
+                    exit(1);
+                }
+            },
+            Some(cli::StatusCommands::Set { health_state }) => {
+                match client::set_health_state(health_state.into()).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("Failed to set status: {}", e);
+                        exit(1);
+                    }
+                }
             }
             None => {}
         },

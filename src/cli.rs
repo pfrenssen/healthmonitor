@@ -40,8 +40,8 @@ pub enum StatusCommands {
     /// Sets the health status of the monitored application.
     Set {
         /// The new health status of the monitored application.
-        #[arg(short, long)]
-        status: HealthState,
+        #[arg(long)]
+        health_state: HealthState,
     },
 }
 

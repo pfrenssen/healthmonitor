@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Deserialize, Serialize)]
-// Todo: We should make the health field private and provide accessors, so we can propagate the
-//   health status changes to the server.
 pub struct Status {
     pub health: HealthState,
     pub messages: Vec<String>,
@@ -21,11 +19,6 @@ impl Status {
 
     pub fn add_message(&mut self, message: String) {
         self.messages.push(message);
-    }
-
-    pub fn set_unhealthy(&mut self, message: String) {
-        self.health = HealthState::Unhealthy;
-        self.add_message(message);
     }
 }
 
@@ -66,6 +59,27 @@ impl From<crate::cli::HealthState> for HealthState {
     }
 }
 
+impl TryFrom<&str> for HealthState {
+    type Error = &'static str;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "healthy" => Ok(HealthState::Healthy),
+            "unhealthy" => Ok(HealthState::Unhealthy),
+            _ => Err("Invalid health state"),
+        }
+    }
+}
+
+impl fmt::Display for HealthState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status = match self {
+            HealthState::Healthy => "healthy",
+            HealthState::Unhealthy => "unhealthy",
+        };
+        write!(f, "{}", status)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,15 +101,6 @@ mod tests {
     }
 
     #[test]
-    fn test_set_unhealthy() {
-        let mut status = Status::new();
-        status.set_unhealthy("Error occurred".to_string());
-        assert_eq!(status.health, HealthState::Unhealthy);
-        assert_eq!(status.messages.len(), 1);
-        assert_eq!(status.messages[0], "Error occurred");
-    }
-
-    #[test]
     fn test_to_string() {
         let mut status = Status::new();
         assert_eq!(status.to_string(), "healthy");
@@ -103,7 +108,8 @@ mod tests {
         status.add_message("All systems go".to_string());
         assert_eq!(status.to_string(), "healthy: All systems go");
 
-        status.set_unhealthy("Houston, we have a problem".to_string());
+        status.health = HealthState::Unhealthy;
+        status.add_message("Houston, we have a problem".to_string());
         assert_eq!(
             status.to_string(),
             "unhealthy: All systems go, Houston, we have a problem"

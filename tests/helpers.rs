@@ -28,7 +28,11 @@ impl Drop for TestServer {
 impl TestServer {
     pub async fn start() -> Self {
         let (server, stdout, stderr, _notify) = start_server().await;
-        TestServer { server, stdout, stderr }
+        TestServer {
+            server,
+            stdout,
+            stderr,
+        }
     }
 
     pub async fn stop(&mut self) {
@@ -159,14 +163,8 @@ pub async fn check_log_output<T>(
 
 /// Asserts that the given command exits with the expected exit code.
 #[allow(dead_code)] // Not dead code, used in tests.
-pub async fn assert_exit_code(
-    mut command: tokio::process::Child,
-    expected_exit_code: i32,
-) {
-    let status = command
-        .wait()
-        .await
-        .expect("The command should exit.");
+pub async fn assert_exit_code(mut command: tokio::process::Child, expected_exit_code: i32) {
+    let status = command.wait().await.expect("The command should exit.");
     assert_eq!(
         status.code().unwrap_or(-1),
         expected_exit_code,
