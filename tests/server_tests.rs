@@ -6,7 +6,7 @@ use serial_test::serial;
 #[tokio::test]
 #[serial]
 async fn test_stop_server_by_sending_sigint() {
-    let (mut server, lines, _notify) = start_server().await;
+    let (mut server, _, lines, _notify) = start_server().await;
 
     stop_server(&mut server).await;
 
@@ -36,7 +36,7 @@ async fn test_server_status() {
     );
 
     // Start the server.
-    let (mut server, _, _notify) = start_server().await;
+    let (mut server, _, _, _notify) = start_server().await;
 
     // Now the status command should return `running`.
     let (mut status_command, lines) = server_status().await;
