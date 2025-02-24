@@ -1,9 +1,13 @@
 use crate::client;
 use crate::config::CONFIG;
-use crate::status::HealthStatus;
+use crate::status::{HealthState, Status};
 
-use axum::{routing::get, Router};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::routing::patch;
+use axum::{routing::get, Json, Router};
 use log::{debug, error, info, warn};
+use serde_json::Value;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
@@ -12,11 +16,11 @@ use tower_http::trace::TraceLayer;
 
 pub struct Server {
     handle: Option<JoinHandle<()>>,
-    status: Arc<Mutex<HealthStatus>>,
+    status: Arc<Mutex<Status>>,
 }
 
 impl Server {
-    pub fn new(status: Arc<Mutex<HealthStatus>>) -> Self {
+    pub fn new(status: Arc<Mutex<Status>>) -> Self {
         Server {
             handle: None,
             status,
@@ -29,10 +33,15 @@ impl Server {
             return Err(());
         }
 
-        let status_clone = self.status.clone();
+        let status_get = self.status.clone();
+        let status_patch = self.status.clone();
 
         let app = Router::new()
-            .route("/status", get(move || status(status_clone.clone())))
+            .route("/status", get(move || status(status_get.clone())))
+            .route(
+                "/status",
+                patch(move |Json(payload)| patch_status(status_patch, payload)),
+            )
             .route("/info", get(info))
             .layer(TraceLayer::new_for_http());
 
@@ -63,7 +72,7 @@ impl Server {
         info!("Server stopped.");
     }
 
-    pub async fn is_running(&self) -> bool {
+    async fn is_running(&self) -> bool {
         if self.handle.is_some() {
             return true;
         }
@@ -73,11 +82,54 @@ impl Server {
 }
 
 /// Returns the current health status of the monitored application.
-async fn status(status: Arc<Mutex<HealthStatus>>) -> String {
+async fn status(status: Arc<Mutex<Status>>) -> String {
     use serde_json::to_string;
 
     let status = status.lock().await;
     to_string(&*status).unwrap()
+}
+
+/// Patches the status of the monitored application.
+async fn patch_status(status: Arc<Mutex<Status>>, payload: Value) -> Response {
+    debug!("Receive PATCH request for status: {:?}", payload);
+    // Check if the payload is valid for a Status struct, otherwise return a 400 error.
+    // Since this is a PATCH request, the payload might be a partial struct.
+    // Todo: Check if the payload contains any keys that are not in the Status struct.
+    // Todo: Implement setting the deployment_state.
+
+    let mut status = status.lock().await;
+
+    // If the 'health' key is present, check if the value is a valid before updating the status.
+    if let Some(health) = payload.get("health") {
+        if let Some(health_str) = health.as_str() {
+            match HealthState::try_from(health_str) {
+                Ok(health_state) => {
+                    debug!("Setting health state to: {}", health_state);
+                    status.health = health_state
+                }
+                Err(err) => {
+                    debug!("Invalid health state: {}", err);
+                    return (StatusCode::BAD_REQUEST, err).into_response();
+                }
+            }
+        } else {
+            debug!("Invalid health state: {:?}", health);
+            return (StatusCode::BAD_REQUEST, "Invalid health state.").into_response();
+        }
+    }
+
+    // If the 'message' key is present, append the message.
+    if let Some(message) = payload.get("message") {
+        if let Some(message_str) = message.as_str() {
+            debug!("Appending message: {}", message_str);
+            status.add_message(message_str.to_string());
+        } else {
+            debug!("Invalid message: {:?}", message);
+            return (StatusCode::BAD_REQUEST, "Invalid message.").into_response();
+        }
+    }
+
+    (StatusCode::OK, "Status updated.").into_response()
 }
 
 /// Returns the application name and version.

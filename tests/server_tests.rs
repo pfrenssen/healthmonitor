@@ -1,20 +1,21 @@
 mod helpers;
 
-use helpers::{check_log_output, check_log_output_regex, server_status, start_server, stop_server};
+use helpers::*;
 use serial_test::serial;
 
 #[tokio::test]
 #[serial]
 async fn test_stop_server_by_sending_sigint() {
-    let (mut server, lines, _notify) = start_server().await;
+    let mut server = TestServer::start().await;
 
-    stop_server(&mut server).await;
+    // Our stop() command works by sending a SIGINT signal to the server process.
+    server.stop().await;
 
     let expected_lines = vec![
         ".*INFO.*Received SIGINT, shutting down.*",
         ".*INFO.*Server stopped.*",
     ];
-    check_log_output_regex(lines, expected_lines).await;
+    check_log_output_regex(server.stderr.clone(), expected_lines).await;
 }
 
 #[tokio::test]
@@ -36,7 +37,7 @@ async fn test_server_status() {
     );
 
     // Start the server.
-    let (mut server, _, _notify) = start_server().await;
+    let mut server = TestServer::start().await;
 
     // Now the status command should return `running`.
     let (mut status_command, lines) = server_status().await;
@@ -54,7 +55,7 @@ async fn test_server_status() {
     );
 
     // Stop the server. The status command should return `not running` again.
-    stop_server(&mut server).await;
+    server.stop().await;
 
     let (mut server_status, lines) = server_status().await;
     let expected_lines = vec!["not running"];

@@ -1,0 +1,40 @@
+# Supported HTTP requests.
+#
+# Make sure the server is running before sending requests to it:
+# $ healthmonitor server start
+#
+# Note that this HTTP server is not intended to be exposed to the public internet. It should only be used in an internal
+# cloud environment as a health check endpoint to be used by a load balancer or other internal monitoring system. There
+# is absolutely no support for authentication, authorization or any other security measures. SSL connections are also
+# not supported.
+
+###
+# Get the current health status of the monitored application.
+GET {{ base_url }}/status
+###
+
+###
+# Set the health status of the monitored application to healthy.
+PATCH {{ base_url }}/status
+Content-Type: application/json
+
+{
+  "health": "healthy"
+}
+###
+
+###
+# Set the health status of the monitored application to unhealthy with a custom message.
+PATCH {{ base_url }}/status
+Content-Type: application/json
+
+{
+  "health": "unhealthy",
+  "message": "Database cannot be reached."
+}
+###
+
+###
+# Get the application name and version.
+GET {{ base_url }}/info
+###

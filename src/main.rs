@@ -1,10 +1,10 @@
 mod cli;
+mod client;
 mod config;
 mod server;
 mod status;
-mod client;
 
-use crate::status::HealthStatus;
+use crate::status::{HealthState, Status};
 
 use clap::Parser;
 use config::CONFIG;
@@ -28,7 +28,10 @@ async fn main() {
     debug!("Parsed args: {:?}", args);
 
     // Initialize the server and status.
-    let mut status = Arc::new(Mutex::new(HealthStatus::new()));
+    // Todo: Rethink how to use the status. Currently we have a local status and a status in the
+    //   server. Probably we should only rely on the server status and fully communicate over the
+    //   client.
+    let status = Arc::new(Mutex::new(Status::new()));
     let server = Arc::new(Mutex::new(Server::new(status.clone())));
 
     // Check if the server is already running in another process. If it is, update the status.
@@ -42,7 +45,11 @@ async fn main() {
             server_running = true;
         }
     }
-    debug!("Health monitor server is {}. Application is {}.", if server_running { "online" } else { "offline" }, status.lock().await.to_string());
+    debug!(
+        "Health monitor server is {}. Application is {}.",
+        if server_running { "online" } else { "offline" },
+        status.lock().await.to_string()
+    );
 
     // Todo: We can keep track of the server status in an enum: Offline, Online, Started.
     let mut server_started = false;
@@ -65,10 +72,31 @@ async fn main() {
             }
             None => {}
         },
-        Some(cli::Commands::Status) => {
-            let status = status.lock().await;
-            println!("{}", status.to_string());
-        }
+        Some(cli::Commands::Status { command }) => match command {
+            Some(cli::StatusCommands::Get) => match client::get_status().await {
+                Ok(status) => {
+                    println!("{}", status);
+                    if status.health == HealthState::Unhealthy {
+                        exit(1);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to get status: {}", e);
+                    exit(1);
+                }
+            },
+            Some(cli::StatusCommands::Set {
+                health_state,
+                message,
+            }) => match client::set_health_state(health_state.into(), message).await {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Failed to set status: {}", e);
+                    exit(1);
+                }
+            },
+            None => {}
+        },
         None => {}
     }
 
@@ -77,7 +105,8 @@ async fn main() {
         return;
     }
 
-    // The server has been started, keep it running until a Ctrl+C signal is received.
+    // The server has been started, keep it running alongside the monitoring threads until a Ctrl+C
+    // signal is received.
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     debug!("Waiting for SIGINT signal");
     loop {
@@ -93,13 +122,17 @@ async fn main() {
     }
 }
 
-async fn toggle_status_periodically(status: Arc<Mutex<HealthStatus>>) {
+async fn toggle_status_periodically(status: Arc<Mutex<Status>>) {
     loop {
         {
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             let mut status = status.lock().await;
-            status.healthy = !status.healthy;
+            status.health = if status.health == HealthState::Healthy {
+                HealthState::Unhealthy
+            } else {
+                HealthState::Healthy
+            };
             info!("Toggled status to {}", status.to_string());
         }
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
     }
 }
