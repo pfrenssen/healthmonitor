@@ -2,9 +2,12 @@ mod helpers;
 
 use helpers::*;
 use serial_test::serial;
+use std::env;
 use std::fmt::Display;
+use std::io::Write;
 use std::process::Stdio;
 use std::sync::Arc;
+use tempfile::NamedTempFile;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -49,7 +52,7 @@ async fn execute_status_command(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("The command to check the status should spawn a child process.");
+        .expect("The command should spawn a child process.");
 
     // Capture the server's log output.
     let stdout = status_command
@@ -84,6 +87,10 @@ impl Display for StatusCommands {
 #[tokio::test]
 #[serial]
 async fn test_status() {
+    // Make sure the environment variable from the other test is not set, we cannot control the
+    // order of tests.
+    env::set_var("HEALTHMONITOR_FILECHECK_FILES", "");
+
     // When we run `cargo run -- status get` without a running server, we should get an error code.
     let (status_command, _, lines) = execute_status_command(StatusCommands::Get, [].to_vec()).await;
     let expected_lines = vec!["Failed to get status: Request error: error sending request for url"];
@@ -130,5 +137,34 @@ async fn test_status() {
     let (status_command, _, lines) = execute_status_command(StatusCommands::Get, [].to_vec()).await;
     let expected_lines = vec!["Failed to get status: Request error: error sending request for url"];
     check_log_output_regex(lines.clone(), expected_lines).await;
+    assert_exit_code(status_command, 1).await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_file_goes_missing() {
+    // Create a test file and configure the server to check it.
+    let mut file = NamedTempFile::new().unwrap();
+    writeln!(file, "Test").unwrap();
+    env::set_var(
+        "HEALTHMONITOR_FILECHECK_FILES",
+        file.path().to_str().unwrap(),
+    );
+
+    // Set a quick interval for the file check.
+    env::set_var("HEALTHMONITOR_FILECHECK_INTERVAL", "1");
+
+    // Start the server. It should be healthy.
+    let _server = TestServer::start().await;
+    assert_status(true).await;
+
+    // Delete the file. The server should become unhealthy.
+    file.close().unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    let (status_command, stdout, _stderr) =
+        execute_status_command(StatusCommands::Get, [].to_vec()).await;
+    let expected_lines =
+        vec!["unhealthy: FileCheck: Failed to access .*: No such file or directory"];
+    check_log_output_regex(stdout.clone(), expected_lines).await;
     assert_exit_code(status_command, 1).await;
 }
