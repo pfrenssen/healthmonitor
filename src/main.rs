@@ -134,30 +134,11 @@ async fn main() {
     // signal is received.
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     debug!("Waiting for SIGINT signal");
-    loop {
-        tokio::select! {
-            _ = sigint.recv() => {
-                info!("Received SIGINT, shutting down.");
-                let mut srv = server.lock().await;
-                srv.stop().await;
-                break;
-            }
-            _ = toggle_status_periodically(status.clone()) => {}
-        }
-    }
-}
-
-async fn toggle_status_periodically(status: Arc<Mutex<Status>>) {
-    loop {
-        {
-            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-            let mut status = status.lock().await;
-            status.health = if status.health == HealthState::Healthy {
-                HealthState::Unhealthy
-            } else {
-                HealthState::Healthy
-            };
-            info!("Toggled status to {}", status.to_string());
+    tokio::select! {
+        _ = sigint.recv() => {
+            info!("Received SIGINT, shutting down.");
+            let mut srv = server.lock().await;
+            srv.stop().await;
         }
     }
 }
