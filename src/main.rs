@@ -122,7 +122,6 @@ async fn main() {
     }
 
     // Start the plugins that will monitor the health of the system.
-    // debug!("Initializing plugin manager.");
     let plugin_manager = PluginManager::new();
     let status_clone = status.clone();
     debug!("Starting health monitoring.");

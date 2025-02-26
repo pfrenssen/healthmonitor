@@ -59,6 +59,14 @@ Example:
 $ healthmonitor status set unhealthy --message "Cannot connect to database."
 ```
 
+You can get a quick health check without starting the server using the following command:
+
+```bash
+$ healthmonitor check
+```
+
+This does a limited number of fast checks to get a quick status of the environment. It is intended to be used very
+early in the deployment process to ensure the environment is stable enough to start the monitored application.
 
 ## REST endpoint
 
@@ -78,3 +86,12 @@ Get the current health status of the application: http://127.0.0.1:8080/status -
 application is healthy, and 503 Service Unavailable if the application is unhealthy.
 
 The available REST endpoints are documented in [server.http](https://github.com/pfrenssen/healthmonitor/blob/master/server.http).
+
+## Built-in checks
+
+### File check
+
+The file check plugin checks for the existence of a list of files on the server instance. If any of the files is missing
+or empty, the application will be marked as unhealthy.
+
+It can be configured using the `HEALTHMONITOR_FILECHECK_*` environment variables.

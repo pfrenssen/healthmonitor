@@ -14,7 +14,6 @@ impl FileCheck {
     pub fn new() -> Self {
         Self {
             name: "FileCheck",
-            // Get the timeout from the environment variable `HEALTHMONITOR_FILECHECK_INTERVAL` or default to 30 seconds.
             interval: std::env::var("HEALTHMONITOR_FILECHECK_INTERVAL")
                 .unwrap_or("30".to_string())
                 .parse()
