@@ -21,6 +21,8 @@ pub enum Commands {
         #[command(subcommand)]
         command: Option<StatusCommands>,
     },
+    /// Performs a quick health check of the monitored application.
+    Check,
 }
 
 #[derive(Subcommand, Debug)]

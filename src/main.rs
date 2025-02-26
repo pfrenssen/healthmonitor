@@ -1,9 +1,11 @@
+mod checks;
 mod cli;
 mod client;
 mod config;
 mod server;
 mod status;
 
+use crate::checks::plugin_manager::PluginManager;
 use crate::status::{HealthState, Status};
 
 use clap::Parser;
@@ -36,6 +38,7 @@ async fn main() {
 
     // Check if the server is already running in another process. If it is, update the status.
     // Todo: integrate the status of our running server in the HealthStatus struct?
+    // Todo: We can probably remove this section.
     debug!("Checking if our server is already running.");
     let mut server_running = false;
     if client::is_running().await {
@@ -97,6 +100,19 @@ async fn main() {
             },
             None => {}
         },
+        Some(cli::Commands::Check) => {
+            let plugin_manager = PluginManager::new();
+            let result = plugin_manager.quick_check().await;
+            match result {
+                Ok(_) => {
+                    println!("ok");
+                }
+                Err(e) => {
+                    println!("error: {}", e);
+                    exit(1);
+                }
+            }
+        }
         None => {}
     }
 
@@ -104,6 +120,15 @@ async fn main() {
         debug!("Exiting.");
         return;
     }
+
+    // Start the plugins that will monitor the health of the system.
+    // debug!("Initializing plugin manager.");
+    let plugin_manager = PluginManager::new();
+    let status_clone = status.clone();
+    debug!("Starting health monitoring.");
+    tokio::spawn(async move {
+        plugin_manager.monitor(status_clone).await;
+    });
 
     // The server has been started, keep it running alongside the monitoring threads until a Ctrl+C
     // signal is received.

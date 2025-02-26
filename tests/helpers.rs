@@ -25,6 +25,7 @@ impl Drop for TestServer {
     }
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 impl TestServer {
     pub async fn start() -> Self {
         let (server, stdout, stderr, _notify) = start_server().await;
@@ -40,6 +41,7 @@ impl TestServer {
     }
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 async fn start_server() -> (
     tokio::process::Child,
     Arc<Mutex<tokio::io::Lines<BufReader<tokio::process::ChildStdout>>>>,
@@ -86,6 +88,7 @@ async fn start_server() -> (
     (server, stdout_lines, stderr_lines, notify)
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 async fn stop_server(server: &mut tokio::process::Child) {
     let pid = Pid::from_raw(
         server
@@ -144,6 +147,7 @@ pub async fn check_log_output_regex<T>(
     }
 }
 
+#[allow(dead_code)] // Not dead code, used in tests.
 pub async fn check_log_output<T>(
     lines: Arc<Mutex<tokio::io::Lines<BufReader<T>>>>,
     expected_lines: Vec<&str>,

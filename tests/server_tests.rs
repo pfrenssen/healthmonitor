@@ -2,11 +2,14 @@ mod helpers;
 
 use helpers::*;
 use serial_test::serial;
+use tokio::time::sleep;
 
 #[tokio::test]
 #[serial]
 async fn test_stop_server_by_sending_sigint() {
     let mut server = TestServer::start().await;
+
+    sleep(tokio::time::Duration::from_secs(1)).await;
 
     // Our stop() command works by sending a SIGINT signal to the server process.
     server.stop().await;
