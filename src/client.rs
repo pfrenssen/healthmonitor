@@ -1,5 +1,5 @@
 use crate::config::CONFIG;
-use crate::status::{HealthState, Status};
+use crate::status::{DeploymentPhase, HealthState, Status};
 /// This module contains an HTTP client that queries our own server.
 use std::fmt::Debug;
 
@@ -49,6 +49,14 @@ pub async fn set_health_state(
     if let Some(message) = message {
         json["message"] = serde_json::json!(message);
     }
+    patch("status", &json.to_string()).await?;
+    Ok(())
+}
+
+/// Sets the deployment phase on the server.
+pub async fn set_deployment_phase(phase: DeploymentPhase) -> Result<(), ClientError> {
+    debug!("Setting deployment phase: {}", phase);
+    let json = serde_json::json!({"phase": phase});
     patch("status", &json.to_string()).await?;
     Ok(())
 }

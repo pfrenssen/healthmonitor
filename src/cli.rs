@@ -21,7 +21,12 @@ pub enum Commands {
         #[command(subcommand)]
         command: Option<StateCommands>,
     },
-    /// Performs a quick health check of the monitored application.
+    /// Commands for getting and setting the deployment phase.
+    Phase {
+        #[command(subcommand)]
+        command: Option<PhaseCommands>,
+    },
+    /// Performs a quick health check of the server environment.
     Check,
 }
 
@@ -62,6 +67,36 @@ impl FromStr for HealthState {
             "healthy" => Ok(HealthState::Healthy),
             "unhealthy" => Ok(HealthState::Unhealthy),
             _ => Err(format!("Invalid state: {}", s)),
+        }
+    }
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum PhaseCommands {
+    /// Returns the current deployment phase of the monitored application.
+    Get,
+    /// Sets the deployment phase of the monitored application.
+    Set {
+        /// The new deployment phase of the monitored application.
+        phase: DeploymentPhase,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum DeploymentPhase {
+    Deploying,
+    Online,
+}
+
+impl FromStr for DeploymentPhase {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "deploying" => Ok(DeploymentPhase::Deploying),
+            "online" => Ok(DeploymentPhase::Online),
+            _ => Err(format!("Invalid phase: {}", s)),
         }
     }
 }

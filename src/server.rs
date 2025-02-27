@@ -1,6 +1,6 @@
 use crate::client;
 use crate::config::CONFIG;
-use crate::status::{HealthState, Status};
+use crate::status::{DeploymentPhase, HealthState, Status};
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -111,7 +111,7 @@ async fn patch_status(status: Arc<Mutex<Status>>, payload: Value) -> Response {
 
     let mut status = status.lock().await;
 
-    // If the 'health' key is present, check if the value is a valid before updating the status.
+    // If the 'health' key is present, check if the value is valid before updating the status.
     if let Some(health) = payload.get("health") {
         if let Some(health_str) = health.as_str() {
             match HealthState::try_from(health_str) {
@@ -138,6 +138,25 @@ async fn patch_status(status: Arc<Mutex<Status>>, payload: Value) -> Response {
         } else {
             debug!("Invalid message: {:?}", message);
             return (StatusCode::BAD_REQUEST, "Invalid message.").into_response();
+        }
+    }
+
+    // Set the deployment phase if the 'phase' key is present.
+    if let Some(phase) = payload.get("phase") {
+        if let Some(phase_str) = phase.as_str() {
+            match DeploymentPhase::try_from(phase_str) {
+                Ok(phase) => {
+                    debug!("Setting deployment phase to: {}", phase);
+                    status.phase = phase;
+                }
+                Err(err) => {
+                    debug!("Invalid deployment phase: {}", err);
+                    return (StatusCode::BAD_REQUEST, err).into_response();
+                }
+            }
+        } else {
+            debug!("Invalid deployment phase: {:?}", phase);
+            return (StatusCode::BAD_REQUEST, "Invalid deployment phase.").into_response();
         }
     }
 
@@ -238,6 +257,28 @@ mod tests {
             .await
             .messages
             .contains(&"Test message".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_patch_phase() {
+        let status = Arc::new(Mutex::new(Status::new()));
+        let app = create_router(status.clone());
+        assert_eq!(status.lock().await.phase, DeploymentPhase::Deploying);
+
+        let payload = json!({ "phase": "online" });
+        let response = get_patch_response(&app, payload).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(status.lock().await.phase, DeploymentPhase::Online);
+
+        let payload = json!({ "phase": "deploying" });
+        let response = get_patch_response(&app, payload).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(status.lock().await.phase, DeploymentPhase::Deploying);
+
+        let payload = json!({ "phase": "invalid" });
+        let response = get_patch_response(&app, payload).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(status.lock().await.phase, DeploymentPhase::Deploying);
     }
 
     async fn get_patch_response(app: &Router, payload: Value) -> Response<Body> {

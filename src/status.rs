@@ -47,6 +47,36 @@ pub enum DeploymentPhase {
     Online,
 }
 
+impl From<crate::cli::DeploymentPhase> for DeploymentPhase {
+    fn from(arg: crate::cli::DeploymentPhase) -> Self {
+        match arg {
+            crate::cli::DeploymentPhase::Deploying => DeploymentPhase::Deploying,
+            crate::cli::DeploymentPhase::Online => DeploymentPhase::Online,
+        }
+    }
+}
+
+impl TryFrom<&str> for DeploymentPhase {
+    type Error = &'static str;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "deploying" => Ok(DeploymentPhase::Deploying),
+            "online" => Ok(DeploymentPhase::Online),
+            _ => Err("Invalid deployment phase"),
+        }
+    }
+}
+
+impl fmt::Display for DeploymentPhase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let phase = match self {
+            DeploymentPhase::Deploying => "deploying",
+            DeploymentPhase::Online => "online",
+        };
+        write!(f, "{}", phase)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub enum HealthState {
     #[serde(rename = "healthy")]

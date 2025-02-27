@@ -100,6 +100,27 @@ async fn main() {
             },
             None => {}
         },
+        Some(cli::Commands::Phase { command }) => match command {
+            Some(cli::PhaseCommands::Get) => match client::get_status().await {
+                Ok(status) => {
+                    println!("{}", status.phase);
+                }
+                Err(e) => {
+                    eprintln!("Failed to get phase: {}", e);
+                    exit(1);
+                }
+            },
+            Some(cli::PhaseCommands::Set { phase }) => {
+                match client::set_deployment_phase(phase.into()).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("Failed to set phase: {}", e);
+                        exit(1);
+                    }
+                }
+            }
+            None => {}
+        },
         Some(cli::Commands::Check) => {
             let plugin_manager = PluginManager::new();
             let result = plugin_manager.quick_check().await;
