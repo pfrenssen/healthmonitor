@@ -4,17 +4,17 @@ use std::fmt;
 
 #[derive(Deserialize, Serialize)]
 pub struct Status {
-    pub health: HealthState,
+    pub state: HealthState,
     pub messages: Vec<String>,
-    pub deployment_state: DeploymentState,
+    pub phase: DeploymentPhase,
 }
 
 impl Status {
     pub fn new() -> Self {
         Status {
-            health: HealthState::Healthy,
+            state: HealthState::Healthy,
             messages: Vec::new(),
-            deployment_state: DeploymentState::Deploying,
+            phase: DeploymentPhase::Deploying,
         }
     }
 
@@ -26,7 +26,7 @@ impl Status {
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut status = String::new();
-        status.push_str(if self.health == HealthState::Healthy {
+        status.push_str(if self.state == HealthState::Healthy {
             "healthy"
         } else {
             "unhealthy"
@@ -40,14 +40,18 @@ impl fmt::Display for Status {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub enum DeploymentState {
+pub enum DeploymentPhase {
+    #[serde(rename = "deploying")]
     Deploying,
-    Running,
+    #[serde(rename = "online")]
+    Online,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub enum HealthState {
+    #[serde(rename = "healthy")]
     Healthy,
+    #[serde(rename = "unhealthy")]
     Unhealthy,
 }
 
@@ -97,9 +101,9 @@ mod tests {
     #[test]
     fn test_health_status_new() {
         let status = Status::new();
-        assert_eq!(status.health, HealthState::Healthy);
+        assert_eq!(status.state, HealthState::Healthy);
         assert!(status.messages.is_empty());
-        assert_eq!(status.deployment_state, DeploymentState::Deploying);
+        assert_eq!(status.phase, DeploymentPhase::Deploying);
     }
 
     #[test]
@@ -118,7 +122,7 @@ mod tests {
         status.add_message("All systems go".to_string());
         assert_eq!(status.to_string(), "healthy: All systems go");
 
-        status.health = HealthState::Unhealthy;
+        status.state = HealthState::Unhealthy;
         status.add_message("Houston, we have a problem".to_string());
         assert_eq!(
             status.to_string(),

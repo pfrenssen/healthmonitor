@@ -16,10 +16,10 @@ pub enum Commands {
         #[command(subcommand)]
         command: Option<ServerCommands>,
     },
-    /// Commands for getting and setting the health status of the monitored application.
-    Status {
+    /// Commands for getting and setting the health state of the monitored application.
+    State {
         #[command(subcommand)]
-        command: Option<StatusCommands>,
+        command: Option<StateCommands>,
     },
     /// Performs a quick health check of the monitored application.
     Check,
@@ -36,12 +36,12 @@ pub enum ServerCommands {
 
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
-pub enum StatusCommands {
-    /// Returns the current health status of the monitored application.
+pub enum StateCommands {
+    /// Returns the current health state of the monitored application.
     Get,
-    /// Sets the health status of the monitored application.
+    /// Sets the health state of the monitored application.
     Set {
-        /// The new health status of the monitored application.
+        /// The new health state of the monitored application.
         health_state: HealthState,
         #[arg(long)]
         message: Option<String>,
@@ -61,7 +61,7 @@ impl FromStr for HealthState {
         match s.to_lowercase().as_str() {
             "healthy" => Ok(HealthState::Healthy),
             "unhealthy" => Ok(HealthState::Unhealthy),
-            _ => Err(format!("Invalid status: {}", s)),
+            _ => Err(format!("Invalid state: {}", s)),
         }
     }
 }

@@ -29,7 +29,7 @@ impl PluginManager {
                 loop {
                     // Only run the check if the status is healthy.
                     let current_status = status.lock().await;
-                    if current_status.health == crate::status::HealthState::Unhealthy {
+                    if current_status.state == crate::status::HealthState::Unhealthy {
                         debug!(
                             "Not executing {} because the status is unhealthy",
                             plugin_name
@@ -39,7 +39,7 @@ impl PluginManager {
                     drop(current_status);
 
                     if let Err(e) = plugin.run().await {
-                        status.lock().await.health = crate::status::HealthState::Unhealthy;
+                        status.lock().await.state = crate::status::HealthState::Unhealthy;
                         let message: String = format!("{}: {}", plugin_name, e).to_string();
                         status.lock().await.add_message(message);
                         error!("{} failed: {}", plugin_name, e);

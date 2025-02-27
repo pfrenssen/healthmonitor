@@ -97,7 +97,7 @@ async fn status(status: Arc<Mutex<Status>>) -> Response {
 
     let status = status.lock().await;
     let response = to_string(&*status).unwrap_or_else(|_| "".to_string());
-    let status_code: StatusCode = status.health.into();
+    let status_code: StatusCode = status.state.into();
     (status_code, response).into_response()
 }
 
@@ -117,7 +117,7 @@ async fn patch_status(status: Arc<Mutex<Status>>, payload: Value) -> Response {
             match HealthState::try_from(health_str) {
                 Ok(health_state) => {
                     debug!("Setting health state to: {}", health_state);
-                    status.health = health_state
+                    status.state = health_state
                 }
                 Err(err) => {
                     debug!("Invalid health state: {}", err);
@@ -183,6 +183,9 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
+        let expected = r#"{"state":"healthy","messages":[],"phase":"deploying"}"#;
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        assert_eq!(&body[..], expected.as_bytes());
     }
 
     #[tokio::test]
@@ -190,7 +193,7 @@ mod tests {
         let status = Arc::new(Mutex::new(Status::new()));
         let app = create_router(status.clone());
 
-        status.lock().await.health = HealthState::Unhealthy;
+        status.lock().await.state = HealthState::Unhealthy;
 
         let response = app
             .oneshot(
@@ -209,22 +212,22 @@ mod tests {
     async fn test_patch_status() {
         let status = Arc::new(Mutex::new(Status::new()));
         let app = create_router(status.clone());
-        assert_eq!(status.lock().await.health, HealthState::Healthy);
+        assert_eq!(status.lock().await.state, HealthState::Healthy);
 
         let payload = json!({ "health": "unhealthy" });
         let response = get_patch_response(&app, payload).await;
         assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(status.lock().await.health, HealthState::Unhealthy);
+        assert_eq!(status.lock().await.state, HealthState::Unhealthy);
 
         let payload = json!({ "health": "healthy" });
         let response = get_patch_response(&app, payload).await;
         assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(status.lock().await.health, HealthState::Healthy);
+        assert_eq!(status.lock().await.state, HealthState::Healthy);
 
         let payload = json!({ "health": "invalid" });
         let response = get_patch_response(&app, payload).await;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(status.lock().await.health, HealthState::Healthy);
+        assert_eq!(status.lock().await.state, HealthState::Healthy);
 
         let payload = json!({ "message": "Test message" });
         let response = get_patch_response(&app, payload).await;

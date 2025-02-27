@@ -75,26 +75,26 @@ async fn main() {
             }
             None => {}
         },
-        Some(cli::Commands::Status { command }) => match command {
-            Some(cli::StatusCommands::Get) => match client::get_status().await {
+        Some(cli::Commands::State { command }) => match command {
+            Some(cli::StateCommands::Get) => match client::get_status().await {
                 Ok(status) => {
                     println!("{}", status);
-                    if status.health == HealthState::Unhealthy {
+                    if status.state == HealthState::Unhealthy {
                         exit(1);
                     }
                 }
                 Err(e) => {
-                    eprintln!("Failed to get status: {}", e);
+                    eprintln!("Failed to get state: {}", e);
                     exit(1);
                 }
             },
-            Some(cli::StatusCommands::Set {
+            Some(cli::StateCommands::Set {
                 health_state,
                 message,
             }) => match client::set_health_state(health_state.into(), message).await {
                 Ok(_) => {}
                 Err(e) => {
-                    eprintln!("Failed to set status: {}", e);
+                    eprintln!("Failed to set state: {}", e);
                     exit(1);
                 }
             },
