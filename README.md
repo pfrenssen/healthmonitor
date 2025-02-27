@@ -68,6 +68,49 @@ $ healthmonitor check
 This does a limited number of fast checks to get a quick status of the environment. It is intended to be used very
 early in the deployment process to ensure the environment is stable enough to start the monitored application.
 
+### Setting and getting the deployment phase
+
+When the server is started, the application will be by default in "Deploying" state. During this phase the application
+can do deployment specific tasks, such as setting up the database schema, importing configuration, etc. After the
+deployment is complete the application can be set to "Online" state.
+
+During the "Deploying" phase the health status is always set to "healthy". This is to ensure that the cloud orchestrator
+will not terminate the instance before the deployment is complete.
+
+To set the deployment phase to "Deploying" or "Online", use the following command:
+
+```bash
+$ healthmonitor phase set <phase>
+```
+
+Example:
+
+```bash
+$ healthmonitor phase set online
+```
+
+### Scripting
+
+A typical deployment script of a monitored application will look like this:
+
+```bash
+#!/usr/bin/env bash
+
+# Do a quick sanity check of the environment before starting the deployment.
+# This will fail with an error code if the environment is not healthy.
+healthmonitor check
+
+# Start the health monitor in the background.
+healthmonitor server start &
+
+# Perform the deployment of the application.
+drush deploy
+
+# When deployment is complete, switch the health monitor from deployment mode to online mode.
+healthmonitor phase set online
+```
+
+
 ## REST endpoint
 
 A REST endpoint is exposed by the application to interact with the health status through HTTP requests.
