@@ -1,6 +1,6 @@
 use crate::checks::file_check::FileCheck;
 use crate::checks::HealthCheck;
-use crate::status::Status;
+use crate::status::{DeploymentPhase, Status};
 use log::{debug, error};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -27,8 +27,19 @@ impl PluginManager {
             let plugin_name = plugin.name().to_string();
             tokio::spawn(async move {
                 loop {
-                    // Only run the check if the status is healthy.
+                    // If the application is in the deployment phase, wait until we are online.
                     let current_status = status.lock().await;
+                    if current_status.phase == DeploymentPhase::Deploying {
+                        debug!(
+                            "Not executing {} because the application is being deployed",
+                            plugin_name
+                        );
+                        drop(current_status);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                        continue;
+                    }
+
+                    // Only run the check if the status is healthy.
                     if current_status.state == crate::status::HealthState::Unhealthy {
                         debug!(
                             "Not executing {} because the status is unhealthy",

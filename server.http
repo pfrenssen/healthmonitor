@@ -35,6 +35,15 @@ Content-Type: application/json
 ###
 
 ###
+# Set the deployment phase of the monitored application to online.
+PATCH {{ base_url }}/status
+Content-Type: application/json
+
+{
+  "phase": "online"
+}
+
+###
 # Get the application name and version.
 GET {{ base_url }}/info
 ###
