@@ -202,7 +202,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        let expected = r#"{"state":"healthy","messages":[],"phase":"deploying"}"#;
+        let expected = r#"{"state":"healthy","messages":[],"phase":"online"}"#;
         let body = response.into_body().collect().await.unwrap().to_bytes();
         assert_eq!(&body[..], expected.as_bytes());
     }
@@ -263,11 +263,6 @@ mod tests {
     async fn test_patch_phase() {
         let status = Arc::new(Mutex::new(Status::new()));
         let app = create_router(status.clone());
-        assert_eq!(status.lock().await.phase, DeploymentPhase::Deploying);
-
-        let payload = json!({ "phase": "online" });
-        let response = get_patch_response(&app, payload).await;
-        assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(status.lock().await.phase, DeploymentPhase::Online);
 
         let payload = json!({ "phase": "deploying" });
@@ -275,10 +270,15 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(status.lock().await.phase, DeploymentPhase::Deploying);
 
+        let payload = json!({ "phase": "online" });
+        let response = get_patch_response(&app, payload).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(status.lock().await.phase, DeploymentPhase::Online);
+
         let payload = json!({ "phase": "invalid" });
         let response = get_patch_response(&app, payload).await;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(status.lock().await.phase, DeploymentPhase::Deploying);
+        assert_eq!(status.lock().await.phase, DeploymentPhase::Online);
     }
 
     async fn get_patch_response(app: &Router, payload: Value) -> Response<Body> {

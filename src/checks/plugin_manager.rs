@@ -1,5 +1,6 @@
 use crate::checks::file_check::FileCheck;
 use crate::checks::HealthCheck;
+use crate::config::CONFIG;
 use crate::status::{DeploymentPhase, Status};
 use log::{debug, error};
 use std::sync::Arc;
@@ -77,5 +78,5 @@ impl PluginManager {
 }
 
 fn create_plugins() -> Vec<Arc<dyn HealthCheck + Send + Sync>> {
-    vec![Arc::new(FileCheck::new())]
+    vec![Arc::new(FileCheck::new(&CONFIG))]
 }
