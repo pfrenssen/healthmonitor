@@ -1,3 +1,4 @@
+use crate::config::CONFIG;
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -14,7 +15,7 @@ impl Status {
         Status {
             state: HealthState::Healthy,
             messages: Vec::new(),
-            phase: DeploymentPhase::Deploying,
+            phase: CONFIG.server.phase.clone(),
         }
     }
 
@@ -39,7 +40,7 @@ impl fmt::Display for Status {
     }
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum DeploymentPhase {
     #[serde(rename = "deploying")]
     Deploying,
@@ -133,7 +134,7 @@ mod tests {
         let status = Status::new();
         assert_eq!(status.state, HealthState::Healthy);
         assert!(status.messages.is_empty());
-        assert_eq!(status.phase, DeploymentPhase::Deploying);
+        assert_eq!(status.phase, DeploymentPhase::Online);
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use crate::status::DeploymentPhase;
 use std::sync::LazyLock;
 use std::{env, fmt};
 
@@ -15,6 +16,12 @@ impl Config {
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(8080);
+        let phase = DeploymentPhase::try_from(
+            env::var("HEALTHMONITOR_SERVER_PHASE")
+                .unwrap_or_else(|_| "online".to_string())
+                .as_str(),
+        )
+        .unwrap_or(DeploymentPhase::Online);
 
         let file_check_interval = env::var("HEALTHMONITOR_FILECHECK_INTERVAL")
             .ok()
@@ -32,6 +39,7 @@ impl Config {
                 scheme,
                 address,
                 port,
+                phase,
             },
             checks: ChecksConfig {
                 file_check: FileCheckConfig {
@@ -55,6 +63,7 @@ pub struct ServerConfig {
     pub scheme: String,
     pub address: String,
     pub port: u16,
+    pub phase: DeploymentPhase,
 }
 
 impl fmt::Debug for ServerConfig {
