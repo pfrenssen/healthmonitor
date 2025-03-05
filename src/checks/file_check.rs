@@ -1,4 +1,5 @@
 use crate::checks::HealthCheck;
+use crate::config::Config;
 use async_trait::async_trait;
 use log::debug;
 use std::fs;
@@ -11,20 +12,12 @@ pub struct FileCheck {
 }
 
 impl FileCheck {
-    pub fn new() -> Self {
+    pub fn new(config: &Config) -> Self {
         Self {
             name: "FileCheck",
-            interval: std::env::var("HEALTHMONITOR_FILECHECK_INTERVAL")
-                .unwrap_or("30".to_string())
-                .parse()
-                .unwrap_or(30),
+            interval: config.checks.file_check.interval,
             is_quick_check: true,
-            files: std::env::var("HEALTHMONITOR_FILECHECK_FILES")
-                .unwrap_or_else(|_| "".to_string())
-                .split(',')
-                .filter(|s| !s.trim().is_empty())
-                .map(|s| s.trim().to_string())
-                .collect(),
+            files: config.checks.file_check.files.clone(),
         }
     }
 }
@@ -60,128 +53,103 @@ impl HealthCheck for FileCheck {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
-    use std::env;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
     #[test]
     fn test_name() {
-        let check = FileCheck::new();
+        let check = FileCheck::new(&Config::new());
         assert_eq!(check.name(), "FileCheck");
     }
 
     #[test]
     fn test_is_quick_check() {
-        let check = FileCheck::new();
+        let check = FileCheck::new(&Config::new());
         assert!(check.is_quick_check());
     }
 
     #[test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
-    fn test_interval_from_env() {
-        env::set_var("HEALTHMONITOR_FILECHECK_INTERVAL", "45");
-        let check = FileCheck::new();
+    fn test_custom_interval() {
+        let mut config = Config::new();
+        config.checks.file_check.interval = 45;
+        let check = FileCheck::new(&config);
         assert_eq!(check.interval(), 45);
-        env::remove_var("HEALTHMONITOR_FILECHECK_INTERVAL");
-    }
-
-    #[test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
-    fn test_interval_default() {
-        env::remove_var("HEALTHMONITOR_FILECHECK_INTERVAL");
-        let check = FileCheck::new();
-        assert_eq!(check.interval(), 30);
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
-    async fn test_run_env_var_not_set() {
-        env::remove_var("HEALTHMONITOR_FILECHECK_FILES");
-        let check = FileCheck::new();
+    async fn test_run_without_files() {
+        let mut config = Config::new();
+        config.checks.file_check.files = vec![];
+        let check = FileCheck::new(&config);
         assert!(check.run().await.is_ok());
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
     async fn test_run_single_existing_non_empty_file() {
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "Test").unwrap();
-        env::set_var(
-            "HEALTHMONITOR_FILECHECK_FILES",
-            file.path().to_str().unwrap(),
-        );
-        let check = FileCheck::new();
+        let mut config = Config::new();
+        config.checks.file_check.files = vec![file.path().to_str().unwrap().to_string()];
+        let check = FileCheck::new(&config);
         assert!(check.run().await.is_ok());
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
     async fn test_run_single_existing_empty_file() {
         let file = NamedTempFile::new().unwrap();
-        env::set_var(
-            "HEALTHMONITOR_FILECHECK_FILES",
-            file.path().to_str().unwrap(),
-        );
-        let check = FileCheck::new();
+        let mut config = Config::new();
+        config.checks.file_check.files = vec![file.path().to_str().unwrap().to_string()];
+        let check = FileCheck::new(&config);
         assert!(check.run().await.is_err());
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
     async fn test_run_single_non_existing_file() {
-        env::set_var("HEALTHMONITOR_FILECHECK_FILES", "non_existing_file.txt");
-        let check = FileCheck::new();
+        let mut config = Config::new();
+        config.checks.file_check.files = vec!["non_existing_file.txt".to_string()];
+        let check = FileCheck::new(&config);
         assert!(check.run().await.is_err());
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
     async fn test_run_two_existing_non_empty_files() {
         let mut file1 = NamedTempFile::new().unwrap();
         writeln!(file1, "Test").unwrap();
         let mut file2 = NamedTempFile::new().unwrap();
         writeln!(file2, "Test").unwrap();
-        env::set_var(
-            "HEALTHMONITOR_FILECHECK_FILES",
-            format!(
-                "{},{}",
-                file1.path().to_str().unwrap(),
-                file2.path().to_str().unwrap()
-            ),
-        );
-        let check = FileCheck::new();
+        let mut config = Config::new();
+        config.checks.file_check.files = vec![
+            file1.path().to_str().unwrap().to_string(),
+            file2.path().to_str().unwrap().to_string(),
+        ];
+        let check = FileCheck::new(&Config::new());
         assert!(check.run().await.is_ok());
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
     async fn test_run_two_files_first_empty() {
         let file1 = NamedTempFile::new().unwrap();
         let mut file2 = NamedTempFile::new().unwrap();
         writeln!(file2, "Test").unwrap();
-        env::set_var(
-            "HEALTHMONITOR_FILECHECK_FILES",
-            format!(
-                "{},{}",
-                file1.path().to_str().unwrap(),
-                file2.path().to_str().unwrap()
-            ),
-        );
-        let check = FileCheck::new();
+        let mut config = Config::new();
+        config.checks.file_check.files = vec![
+            file1.path().to_str().unwrap().to_string(),
+            file2.path().to_str().unwrap().to_string(),
+        ];
+        let check = FileCheck::new(&config);
         assert!(check.run().await.is_err());
     }
 
     #[tokio::test]
-    #[serial] // Tests that manipulate environment variables should not run concurrently.
     async fn test_run_two_files_second_non_existing() {
         let mut file1 = NamedTempFile::new().unwrap();
         writeln!(file1, "Test").unwrap();
-        env::set_var(
-            "HEALTHMONITOR_FILECHECK_FILES",
-            format!("{},non_existing_file.txt", file1.path().to_str().unwrap()),
-        );
-        let check = FileCheck::new();
+        let mut config = Config::new();
+        config.checks.file_check.files = vec![
+            file1.path().to_str().unwrap().to_string(),
+            "non_existing_file.txt".to_string(),
+        ];
+        let check = FileCheck::new(&config);
         assert!(check.run().await.is_err());
     }
 }
