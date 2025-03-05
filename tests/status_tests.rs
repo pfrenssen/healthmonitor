@@ -248,15 +248,15 @@ async fn test_phase() {
     check_log_output_regex(lines.clone(), expected_lines).await;
     assert_exit_code(phase_command, 1).await;
 
-    // Start the server. Now `cargo run -- phase get` should return `deploying`.
+    // Start the server. Now `cargo run -- phase get` should return `online`.
     let mut server = TestServer::start().await;
-    assert_phase(DeploymentPhase::Deploying).await;
-
-    // Switch the application to online mode. The phase should then be reported as online.
-    let (update_phase_command, _stdout, _stderr) =
-        execute_phase_command(SubCommands::Set, ["online".to_string()].to_vec()).await;
-    assert_exit_code(update_phase_command, 0).await;
     assert_phase(DeploymentPhase::Online).await;
+
+    // Switch the application to deploying mode. The phase should then be reported as such.
+    let (update_phase_command, _stdout, _stderr) =
+        execute_phase_command(SubCommands::Set, ["deploying".to_string()].to_vec()).await;
+    assert_exit_code(update_phase_command, 0).await;
+    assert_phase(DeploymentPhase::Deploying).await;
 
     // Stop the server. We should get an error when we try to get the phase.
     server.stop().await;
