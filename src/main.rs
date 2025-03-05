@@ -29,16 +29,10 @@ async fn main() {
     let args = cli::Cli::parse();
     debug!("Parsed args: {:?}", args);
 
-    // Initialize the server and status.
-    // Todo: Rethink how to use the status. Currently we have a local status and a status in the
-    //   server. Probably we should only rely on the server status and fully communicate over the
-    //   client.
+    // Initialize a new status.
     let status = Arc::new(Mutex::new(Status::new()));
-    let server = Arc::new(Mutex::new(Server::new(status.clone())));
 
     // Check if the server is already running in another process. If it is, update the status.
-    // Todo: integrate the status of our running server in the HealthStatus struct?
-    // Todo: We can probably remove this section.
     debug!("Checking if our server is already running.");
     let mut server_running = false;
     if client::is_running().await {
@@ -54,16 +48,13 @@ async fn main() {
         status.lock().await.to_string()
     );
 
-    // Todo: We can keep track of the server status in an enum: Offline, Online, Started.
-    let mut server_started = false;
     match args.command {
         Some(cli::Commands::Server { command }) => match command {
             Some(cli::ServerCommands::Start) => {
-                let mut srv = server.lock().await;
-                match srv.start().await {
-                    Ok(_) => server_started = true,
-                    Err(_) => exit(1),
+                if (start_server().await).is_err() {
+                    exit(1);
                 }
+                return;
             }
             Some(cli::ServerCommands::Status) => {
                 if server_running {
@@ -137,10 +128,15 @@ async fn main() {
         None => {}
     }
 
-    if !server_started {
-        debug!("Exiting.");
-        return;
-    }
+    debug!("Exiting.");
+}
+
+async fn start_server() -> Result<(), ()> {
+    let status = Arc::new(Mutex::new(Status::new()));
+    let server = Arc::new(Mutex::new(Server::new(status.clone())));
+
+    // Start the server.
+    server.lock().await.start().await?;
 
     // Start the plugins that will monitor the health of the system.
     let plugin_manager = PluginManager::new();
@@ -150,15 +146,15 @@ async fn main() {
         plugin_manager.monitor(status_clone).await;
     });
 
-    // The server has been started, keep it running alongside the monitoring threads until a Ctrl+C
-    // signal is received.
+    // Keep the server running alongside the monitoring threads until a Ctrl+C signal is received.
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
-    debug!("Waiting for SIGINT signal");
+    debug!("Waiting for SIGINT signal.");
     tokio::select! {
         _ = sigint.recv() => {
             info!("Received SIGINT, shutting down.");
             let mut srv = server.lock().await;
             srv.stop().await;
+            Ok(())
         }
     }
 }
