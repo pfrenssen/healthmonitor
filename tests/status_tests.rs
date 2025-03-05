@@ -148,9 +148,7 @@ impl Display for SubCommands {
 #[tokio::test]
 #[serial]
 async fn test_state() {
-    // Make sure the environment variable from the other test is not set, we cannot control the
-    // order of tests.
-    env::set_var("HEALTHMONITOR_FILECHECK_FILES", "");
+    prepare_environment();
 
     // When we run `cargo run -- state get` without a running server, we should get an error code.
     let (state_command, _, lines) = execute_state_command(SubCommands::Get, [].to_vec()).await;
@@ -204,6 +202,8 @@ async fn test_state() {
 #[tokio::test]
 #[serial]
 async fn test_file_goes_missing() {
+    prepare_environment();
+
     // Create a test file and configure the server to check it.
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "Test").unwrap();
@@ -238,9 +238,7 @@ async fn test_file_goes_missing() {
 #[tokio::test]
 #[serial]
 async fn test_phase() {
-    // Make sure the environment variable from the other test is not set, we cannot control the
-    // order of tests.
-    env::set_var("HEALTHMONITOR_FILECHECK_FILES", "");
+    prepare_environment();
 
     // When we run `cargo run -- phase get` without a running server, we should get an error code.
     let (phase_command, _, lines) = execute_phase_command(SubCommands::Get, [].to_vec()).await;
@@ -265,4 +263,10 @@ async fn test_phase() {
     let expected_lines = vec!["Failed to get phase: Request error: error sending request for url"];
     check_log_output_regex(lines.clone(), expected_lines).await;
     assert_exit_code(phase_command, 1).await;
+}
+
+fn prepare_environment() {
+    // Disable the checks. Each test should enable them as needed.
+    env::set_var("HEALTHMONITOR_FILECHECK_FILES", "");
+    env::set_var("HEALTHMONITOR_URLCHECK_URLS", "");
 }

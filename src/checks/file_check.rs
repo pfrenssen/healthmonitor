@@ -36,8 +36,12 @@ impl HealthCheck for FileCheck {
         self.is_quick_check
     }
 
+    fn is_enabled(&self) -> bool {
+        !self.files.is_empty()
+    }
+
     async fn run(&self) -> Result<(), String> {
-        debug!("Running checks");
+        debug!("Running file checks");
 
         for file in &self.files {
             let metadata =

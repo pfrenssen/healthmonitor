@@ -53,12 +53,13 @@ jobs:
       - name: Update Rust toolchain
         run: rustup update
       - name: Cache cargo-outdated
-        uses: actions/cache@v3
+        id: cache-cargo-outdated
+        uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/cargo-outdated
           key: ${{ runner.os }}-cargo-outdated-${{ hashFiles('**/Cargo.lock') }}
       - name: Install cargo-outdated
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache-cargo-outdated.outputs.cache-hit != 'true'
         run: cargo install cargo-outdated
       - name: Check cargo-outdated version
         run: cargo outdated --version

@@ -25,3 +25,4 @@ serial_test = "3.2.0"
 tempfile = "3.17.1"
 tokio = { version = "1.43.0", features = ["process"] }
 tower = "0.5.2"
+wiremock = "0.6.3"
