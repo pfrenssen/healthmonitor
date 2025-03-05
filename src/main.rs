@@ -29,25 +29,6 @@ async fn main() {
     let args = cli::Cli::parse();
     debug!("Parsed args: {:?}", args);
 
-    // Initialize a new status.
-    let status = Arc::new(Mutex::new(Status::new()));
-
-    // Check if the server is already running in another process. If it is, update the status.
-    debug!("Checking if our server is already running.");
-    let mut server_running = false;
-    if client::is_running().await {
-        if let Ok(s) = client::get_status().await {
-            let mut status = status.lock().await;
-            *status = s;
-            server_running = true;
-        }
-    }
-    debug!(
-        "Health monitor server is {}. Application is {}.",
-        if server_running { "online" } else { "offline" },
-        status.lock().await.to_string()
-    );
-
     match args.command {
         Some(cli::Commands::Server { command }) => match command {
             Some(cli::ServerCommands::Start) => {
@@ -57,7 +38,7 @@ async fn main() {
                 return;
             }
             Some(cli::ServerCommands::Status) => {
-                if server_running {
+                if client::is_running().await {
                     println!("running");
                 } else {
                     println!("not running");
