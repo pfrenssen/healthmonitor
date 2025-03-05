@@ -103,6 +103,10 @@ healthmonitor check
 # Start the health monitor in the background.
 healthmonitor server start &
 
+# Switch the health monitor to deployment mode. This will ensure the instance will not be marked unhealthy until the
+# deployment is complete.
+healthmonitor phase set deploying
+
 # Perform the deployment of the application.
 drush deploy
 
@@ -138,3 +142,10 @@ The file check plugin checks for the existence of a list of files on the server 
 or empty, the application will be marked as unhealthy.
 
 It can be configured using the `HEALTHMONITOR_FILECHECK_*` environment variables.
+
+### URL check
+
+The URL check plugin checks if a list of URLs are reachable and return a 200 OK status code. If any of the URLs are
+unreachable or return a non-200 status code, the application will be marked as unhealthy.
+
+Configuration is done using the `HEALTHMONITOR_URLCHECK_*` environment variables.

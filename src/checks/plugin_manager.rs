@@ -1,4 +1,5 @@
 use crate::checks::file_check::FileCheck;
+use crate::checks::url_check::UrlCheck;
 use crate::checks::HealthCheck;
 use crate::config::CONFIG;
 use crate::status::{DeploymentPhase, Status};
@@ -28,6 +29,11 @@ impl PluginManager {
             let plugin_name = plugin.name().to_string();
             tokio::spawn(async move {
                 loop {
+                    if !plugin.is_enabled() {
+                        debug!("{} is disabled. Skipping.", plugin_name);
+                        break;
+                    }
+
                     // If the application is in the deployment phase, wait until we are online.
                     let current_status = status.lock().await;
                     if current_status.phase == DeploymentPhase::Deploying {
@@ -78,5 +84,8 @@ impl PluginManager {
 }
 
 fn create_plugins() -> Vec<Arc<dyn HealthCheck + Send + Sync>> {
-    vec![Arc::new(FileCheck::new(&CONFIG))]
+    vec![
+        Arc::new(FileCheck::new(&CONFIG)),
+        Arc::new(UrlCheck::new(&CONFIG)),
+    ]
 }
