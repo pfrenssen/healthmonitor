@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Status {
     pub state: HealthState,
     pub messages: Vec<String>,
@@ -122,6 +122,26 @@ impl fmt::Display for HealthState {
             HealthState::Unhealthy => "unhealthy",
         };
         write!(f, "{}", status)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StatusReport {
+    pub server_running: bool,
+    pub status: Option<Status>,
+}
+
+impl fmt::Display for StatusReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "Server running: {}",
+            if self.server_running { "yes" } else { "no" }
+        )?;
+        match &self.status {
+            Some(status) => write!(f, "Status: {}", status),
+            None => write!(f, "Status: <not available>"),
+        }
     }
 }
 
