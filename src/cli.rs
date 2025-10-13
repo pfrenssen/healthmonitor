@@ -11,6 +11,13 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Performs a quick health check of the server environment.
+    Check,
+    /// Commands for getting and setting the deployment phase.
+    Phase {
+        #[command(subcommand)]
+        command: Option<PhaseCommands>,
+    },
     /// Commands related to the web server.
     Server {
         #[command(subcommand)]
@@ -21,13 +28,12 @@ pub enum Commands {
         #[command(subcommand)]
         command: Option<StateCommands>,
     },
-    /// Commands for getting and setting the deployment phase.
-    Phase {
-        #[command(subcommand)]
-        command: Option<PhaseCommands>,
+    /// Ouputs a status report.
+    Status {
+        /// The output format of the status report. Either 'text' or 'json'. Default is 'text'.
+        #[arg(long, default_value = "text")]
+        format: StatusFormat,
     },
-    /// Performs a quick health check of the server environment.
-    Check,
 }
 
 #[derive(Subcommand, Debug)]
@@ -57,6 +63,24 @@ pub enum StateCommands {
 pub enum HealthState {
     Healthy,
     Unhealthy,
+}
+
+#[derive(Clone, Debug)]
+pub enum StatusFormat {
+    Text,
+    Json,
+}
+
+impl std::str::FromStr for StatusFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "text" => Ok(StatusFormat::Text),
+            "json" => Ok(StatusFormat::Json),
+            _ => Err(format!("Invalid format: {}", s)),
+        }
+    }
 }
 
 impl FromStr for HealthState {

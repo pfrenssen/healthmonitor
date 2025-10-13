@@ -6,7 +6,7 @@ mod server;
 mod status;
 
 use crate::checks::plugin_manager::PluginManager;
-use crate::status::{HealthState, Status};
+use crate::status::{HealthState, Status, StatusReport};
 
 use clap::Parser;
 use config::CONFIG;
@@ -105,6 +105,23 @@ async fn main() {
                     exit(1);
                 }
             }
+        }
+        Some(cli::Commands::Status { format: _ }) => {
+            let mut status_report = StatusReport {
+                server_running: false,
+                status: None,
+            };
+            let server_running = client::is_running().await;
+            if server_running {
+                status_report.server_running = true;
+                match client::get_status().await {
+                    Ok(status) => {
+                        status_report.status = Some(status);
+                    }
+                    Err(_) => {}
+                }
+            }
+            println!("{}", serde_json::to_string_pretty(&status_report).unwrap());
         }
         None => {}
     }
