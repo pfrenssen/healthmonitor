@@ -149,3 +149,15 @@ The URL check plugin checks if a list of URLs are reachable and return a 200 OK 
 unreachable or return a non-200 status code, the application will be marked as unhealthy.
 
 Configuration is done using the `HEALTHMONITOR_URLCHECK_*` environment variables.
+
+## Development
+
+### Running tests
+
+To run the tests, copy the `.env.example` file to `.env` and make sure to configure an available port for the server.
+Then you can run the tests using Cargo.
+
+
+```bash
+$ cp .env.example .env
+$ cargo test
