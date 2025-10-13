@@ -5,8 +5,8 @@ use crate::status::{DeploymentPhase, HealthState, Status};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{
-    routing::{get, patch},
     Json, Router,
+    routing::{get, patch},
 };
 use log::{debug, error, info, warn};
 use serde_json::Value;
@@ -173,9 +173,9 @@ async fn info() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::Router;
     use axum::body::Body;
     use axum::http::{Request, Response, StatusCode};
-    use axum::Router;
     use http_body_util::BodyExt;
     use serde_json::json;
     use std::sync::Arc;
@@ -252,11 +252,13 @@ mod tests {
         let response = get_patch_response(&app, payload).await;
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(status.lock().await.messages.len(), 1);
-        assert!(status
-            .lock()
-            .await
-            .messages
-            .contains(&"Test message".to_string()));
+        assert!(
+            status
+                .lock()
+                .await
+                .messages
+                .contains(&"Test message".to_string())
+        );
     }
 
     #[tokio::test]

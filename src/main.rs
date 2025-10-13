@@ -15,7 +15,7 @@ use log::{debug, info};
 use server::Server;
 use std::process::exit;
 use std::sync::Arc;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::Mutex;
 
 #[tokio::main]

@@ -1,6 +1,6 @@
+use crate::checks::HealthCheck;
 use crate::checks::file_check::FileCheck;
 use crate::checks::url_check::UrlCheck;
-use crate::checks::HealthCheck;
 use crate::config::CONFIG;
 use crate::status::{DeploymentPhase, Status};
 use log::{debug, error};
