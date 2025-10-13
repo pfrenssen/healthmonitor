@@ -71,7 +71,7 @@ pub enum StatusFormat {
     Json,
 }
 
-impl std::str::FromStr for StatusFormat {
+impl FromStr for StatusFormat {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

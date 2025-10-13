@@ -131,6 +131,20 @@ pub struct StatusReport {
     pub status: Option<Status>,
 }
 
+impl fmt::Display for StatusReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "Server running: {}",
+            if self.server_running { "yes" } else { "no" }
+        )?;
+        match &self.status {
+            Some(status) => write!(f, "Status: {}", status),
+            None => write!(f, "Status: <not available>"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -106,7 +106,7 @@ async fn main() {
                 }
             }
         }
-        Some(cli::Commands::Status { format: _ }) => {
+        Some(cli::Commands::Status { format }) => {
             let mut status_report = StatusReport {
                 server_running: false,
                 status: None,
@@ -114,14 +114,18 @@ async fn main() {
             let server_running = client::is_running().await;
             if server_running {
                 status_report.server_running = true;
-                match client::get_status().await {
-                    Ok(status) => {
-                        status_report.status = Some(status);
-                    }
-                    Err(_) => {}
+                if let Ok(status) = client::get_status().await {
+                    status_report.status = Some(status);
                 }
             }
-            println!("{}", serde_json::to_string_pretty(&status_report).unwrap());
+            match format {
+                cli::StatusFormat::Json => {
+                    println!("{}", serde_json::to_string_pretty(&status_report).unwrap());
+                }
+                cli::StatusFormat::Text => {
+                    println!("{}", status_report);
+                }
+            }
         }
         None => {}
     }
