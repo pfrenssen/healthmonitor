@@ -207,13 +207,15 @@ async fn test_file_goes_missing() {
     // Create a test file and configure the server to check it.
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "Test").unwrap();
-    env::set_var(
-        "HEALTHMONITOR_FILECHECK_FILES",
-        file.path().to_str().unwrap(),
-    );
+    unsafe {
+        env::set_var(
+            "HEALTHMONITOR_FILECHECK_FILES",
+            file.path().to_str().unwrap(),
+        );
 
-    // Set a quick interval for the file check.
-    env::set_var("HEALTHMONITOR_FILECHECK_INTERVAL", "1");
+        // Set a quick interval for the file check.
+        env::set_var("HEALTHMONITOR_FILECHECK_INTERVAL", "1");
+    }
 
     // Start the server and switch the application to online mode to start the checks. It should be
     // healthy.
@@ -267,6 +269,8 @@ async fn test_phase() {
 
 fn prepare_environment() {
     // Disable the checks. Each test should enable them as needed.
-    env::set_var("HEALTHMONITOR_FILECHECK_FILES", "");
-    env::set_var("HEALTHMONITOR_URLCHECK_URLS", "");
+    unsafe {
+        env::set_var("HEALTHMONITOR_FILECHECK_FILES", "");
+        env::set_var("HEALTHMONITOR_URLCHECK_URLS", "");
+    }
 }
