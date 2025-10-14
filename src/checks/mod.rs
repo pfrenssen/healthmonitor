@@ -11,5 +11,6 @@ pub trait HealthCheck {
     fn interval(&self) -> usize;
     fn is_quick_check(&self) -> bool;
     fn is_enabled(&self) -> bool;
+    fn startup_delay(&self) -> usize;
     async fn run(&self) -> Result<(), String>;
 }

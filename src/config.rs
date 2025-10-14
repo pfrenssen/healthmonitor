@@ -33,6 +33,10 @@ impl Config {
             .filter(|s| !s.trim().is_empty())
             .map(|s| s.trim().to_string())
             .collect();
+        let file_check_startup_delay = env::var("HEALTHMONITOR_FILECHECK_STARTUP_DELAY")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(0);
 
         let url_check_interval = env::var("HEALTHMONITOR_URLCHECK_INTERVAL")
             .ok()
@@ -48,6 +52,10 @@ impl Config {
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(10);
+        let url_check_startup_delay = env::var("HEALTHMONITOR_URLCHECK_STARTUP_DELAY")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(0);
 
         Config {
             server: ServerConfig {
@@ -60,11 +68,13 @@ impl Config {
                 file_check: FileCheckConfig {
                     interval: file_check_interval,
                     files: file_check_files,
+                    startup_delay: file_check_startup_delay,
                 },
                 url_check: UrlCheckConfig {
                     interval: url_check_interval,
                     urls: url_check_urls,
                     timeout: url_check_timeout,
+                    startup_delay: url_check_startup_delay,
                 },
             },
         }
@@ -113,6 +123,7 @@ pub struct ChecksConfig {
 pub struct FileCheckConfig {
     pub interval: usize,
     pub files: Vec<String>,
+    pub startup_delay: usize,
 }
 
 #[derive(Debug)]
@@ -120,6 +131,7 @@ pub struct UrlCheckConfig {
     pub interval: usize,
     pub urls: Vec<String>,
     pub timeout: usize,
+    pub startup_delay: usize,
 }
 
 pub static CONFIG: LazyLock<Config> = LazyLock::new(Config::new);
