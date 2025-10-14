@@ -267,6 +267,40 @@ async fn test_phase() {
     assert_exit_code(phase_command, 1).await;
 }
 
+#[tokio::test]
+#[serial]
+async fn test_file_check_startup_delay() {
+    prepare_environment();
+
+    // Set a non-existing file and a startup delay of 2 seconds.
+    unsafe {
+        env::set_var("HEALTHMONITOR_FILECHECK_FILES", "/tmp/nonexistentfile");
+        env::set_var("HEALTHMONITOR_FILECHECK_INTERVAL", "1");
+        env::set_var("HEALTHMONITOR_FILECHECK_STARTUP_DELAY", "2");
+    }
+
+    // Start the server and switch the application to online mode to start the checks.
+    let _server = TestServer::start().await;
+    let (phase_command, _stdout, _stderr) =
+        execute_phase_command(SubCommands::Set, ["online".to_string()].to_vec()).await;
+    assert_exit_code(phase_command, 0).await;
+
+    // Immediately check state: should be healthy (no error yet).
+    assert_state(true).await;
+
+    // Sleep for 2 seconds (startup delay).
+    sleep(tokio::time::Duration::from_secs(2)).await;
+
+    // Now the error should be reported.
+    let (state_command, stdout, _stderr) =
+        execute_state_command(SubCommands::Get, [].to_vec()).await;
+    let expected_lines = vec![
+        "unhealthy: FileCheck: Failed to access /tmp/nonexistentfile: No such file or directory",
+    ];
+    check_log_output_regex(stdout.clone(), expected_lines).await;
+    assert_exit_code(state_command, 1).await;
+}
+
 fn prepare_environment() {
     // Disable the checks. Each test should enable them as needed.
     unsafe {

@@ -27,11 +27,24 @@ impl PluginManager {
             let status = status.clone();
             let interval = plugin.interval();
             let plugin_name = plugin.name().to_string();
+            let startup_delay = plugin.startup_delay();
+            let mut first_run = true;
             tokio::spawn(async move {
                 loop {
                     if !plugin.is_enabled() {
                         debug!("{} is disabled. Skipping.", plugin_name);
                         break;
+                    }
+
+                    // If this is the first run, wait for the startup delay.
+                    if first_run && startup_delay > 0 {
+                        debug!(
+                            "Waiting for {} seconds before starting {}",
+                            startup_delay, plugin_name
+                        );
+                        tokio::time::sleep(tokio::time::Duration::from_secs(startup_delay as u64))
+                            .await;
+                        first_run = false;
                     }
 
                     // If the application is in the deployment phase, wait until we are online.

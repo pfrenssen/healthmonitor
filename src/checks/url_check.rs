@@ -10,6 +10,7 @@ pub struct UrlCheck {
     timeout: usize,
     is_quick_check: bool,
     urls: Vec<String>,
+    startup_delay: usize,
 }
 
 impl UrlCheck {
@@ -20,6 +21,7 @@ impl UrlCheck {
             timeout: config.checks.url_check.timeout,
             is_quick_check: false,
             urls: config.checks.url_check.urls.clone(),
+            startup_delay: config.checks.url_check.startup_delay,
         }
     }
 }
@@ -40,6 +42,10 @@ impl HealthCheck for UrlCheck {
 
     fn is_enabled(&self) -> bool {
         !self.urls.is_empty()
+    }
+
+    fn startup_delay(&self) -> usize {
+        self.startup_delay
     }
 
     async fn run(&self) -> Result<(), String> {

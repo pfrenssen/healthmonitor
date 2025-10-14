@@ -9,6 +9,7 @@ pub struct FileCheck {
     interval: usize,
     is_quick_check: bool,
     files: Vec<String>,
+    startup_delay: usize,
 }
 
 impl FileCheck {
@@ -18,6 +19,7 @@ impl FileCheck {
             interval: config.checks.file_check.interval,
             is_quick_check: true,
             files: config.checks.file_check.files.clone(),
+            startup_delay: config.checks.file_check.startup_delay,
         }
     }
 }
@@ -38,6 +40,10 @@ impl HealthCheck for FileCheck {
 
     fn is_enabled(&self) -> bool {
         !self.files.is_empty()
+    }
+
+    fn startup_delay(&self) -> usize {
+        self.startup_delay
     }
 
     async fn run(&self) -> Result<(), String> {
